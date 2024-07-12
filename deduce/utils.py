@@ -26,7 +26,7 @@ def str_match(
         str_1: The first string.
         str_2: The second string.
         max_edit_distance: Max edit distance between the two strings. Will use
-        exact matching if argument is not used.
+                           exact matching if argument is not used or equals 0.
 
     Returns:
         ``True`` if the strings match, ``False`` otherwise.
@@ -36,13 +36,14 @@ def str_match(
         if titlecase
         else (str_1, str_2)
     )
-    if max_edit_distance is not None:
+
+    if max_edit_distance:
         return (
             DamerauLevenshtein.distance(norm_1, norm_2, score_cutoff=max_edit_distance)
             <= max_edit_distance
         )
-
-    return norm_1 == norm_2
+    else:
+        return norm_1 == norm_2
 
 
 def class_for_name(module_name: str, class_name: str) -> type:

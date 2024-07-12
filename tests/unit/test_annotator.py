@@ -1,5 +1,4 @@
 import re
-from collections import defaultdict
 from unittest.mock import patch
 
 import docdeid as dd
@@ -9,6 +8,7 @@ from deduce.annotator import (
     BsnAnnotator,
     ContextAnnotator,
     ContextPattern,
+    DynamicNameAnnotator,
     PatientNameAnnotator,
     PhoneNumberAnnotator,
     RegexpPseudoAnnotator
@@ -682,6 +682,81 @@ class TestPatientNameAnnotator:
                 end_char=22,
                 tag="achternaam_patient",
             )
+        ]
+
+
+class TestDynamicNameAnnotator:
+    def test_annotate_one(self, tokenizer):
+        metadata = {
+            "arts": [Person(
+                first_names=["Jan", "Johan"],
+                initials="JJ",
+                surname="Jansen",
+            )]
+        }
+        text = "De doctor heet Jansen"
+        tokens = tokenizer.tokenize(text)
+
+        ann = DynamicNameAnnotator(meta_key='arts', tokenizer=tokenizer, tag="_")
+        doc = dd.Document(text=text, metadata=metadata)
+
+        with patch.object(doc, "get_tokens", return_value=tokens):
+            annotations = ann.annotate(doc)
+
+        assert annotations == [
+            dd.Annotation(
+                text="Jansen",
+                start_char=15,
+                end_char=21,
+                tag="achternaam_arts",
+            )
+        ]
+
+    def test_annotate_many(self, tokenizer):
+        metadata = {
+            "arts": [
+                Person(
+                    first_names=["Ron"],
+                    surname="Rivest",
+                ),
+                Person(
+                    first_names=["Adi"],
+                    surname="Shamir",
+                ),
+                Person(
+                    first_names=["Leonard"],
+                    surname="Adleman",
+                ),
+            ]
+        }
+        text = "Met vriendelijke groeten, Rivest, Shamir, Adleman"
+        tokens = tokenizer.tokenize(text)
+
+        ann = DynamicNameAnnotator(meta_key='arts', tokenizer=tokenizer, tag="_")
+        doc = dd.Document(text=text, metadata=metadata)
+
+        with patch.object(doc, "get_tokens", return_value=tokens):
+            annotations = ann.annotate(doc)
+
+        assert annotations == [
+            dd.Annotation(
+                text="Rivest",
+                start_char=26,
+                end_char=32,
+                tag="achternaam_arts",
+            ),
+            dd.Annotation(
+                text="Shamir",
+                start_char=34,
+                end_char=40,
+                tag="achternaam_arts",
+            ),
+            dd.Annotation(
+                text="Adleman",
+                start_char=42,
+                end_char=49,
+                tag="achternaam_arts",
+            ),
         ]
 
 

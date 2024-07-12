@@ -5,6 +5,7 @@ import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
+from functools import reduce
 from itertools import islice
 from typing import Optional
 
@@ -18,6 +19,7 @@ from docdeid.process.annotator import (
     SequenceAnnotator,
     SequencePattern,
 )
+from docdeid.tokenizer import TokenList
 
 warnings.simplefilter(action="default")
 
@@ -174,7 +176,185 @@ class ContextAnnotator(Annotator):
         return []
 
 
-class PatientNameAnnotator(dd.process.Annotator):
+class DynamicNameAnnotator(dd.process.Annotator):
+    """
+    Annotates person names listed in document metadata.
+
+    Args:
+        meta_key: Key in the metadata dict that (when present) contains the list of
+                  person names for this annotator.
+        tokenizer: A tokenizer to use for surnames defined in the metadata.
+    """
+
+    _skip = [".", "-", " "]
+
+    def __init__(self,
+                 meta_key: str,
+                 tokenizer: Tokenizer,
+                 *args,
+                 **kwargs) -> None:
+
+        self.meta_key = meta_key
+        self.tokenizer = tokenizer
+
+        self._matcher_attr_tags = (
+            (DynamicNameAnnotator._match_first_names,
+             "first_names",
+             f"voornaam_{meta_key}"),
+            (DynamicNameAnnotator._match_initial_from_name,
+             "first_names",
+             f"initiaal_{meta_key}"),
+            (DynamicNameAnnotator._match_initials,
+             "initials",
+             f"initiaal_{meta_key}"),
+            (DynamicNameAnnotator._match_surname,
+             "surname",
+             f"achternaam_{meta_key}"),
+        )
+        self._attrs = set(tup[1] for tup in self._matcher_attr_tags)
+
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def _match_first_names(
+            cls,
+            token: Token,
+            name: str,
+    ) -> Optional[tuple[Token, Token]]:
+
+        tolerance = 1 if len(token.text) > 3 else 0
+        if str_match(token.text, name, max_edit_distance=tolerance):
+            return token, token
+        else:
+            return None
+
+    @classmethod
+    def _match_initial_from_name(
+            cls,
+            token: Token,
+            name: str,
+    ) -> Optional[tuple[Token, Token]]:
+
+        if not str_match(token.text, name[0]):
+            return None
+
+        next_token = token.next()
+        if (next_token is not None) and str_match(next_token.text, "."):
+            return token, next_token
+        else:
+            return token, token
+
+    @classmethod
+    def _match_initials(
+            cls,
+            token: Token,
+            name: str,
+    ) -> Optional[tuple[Token, Token]]:
+
+        if str_match(token.text, name):
+            return token, token
+
+        return None
+
+    @classmethod
+    def _match_surname(
+            cls,
+            token: Token,
+            surname_pattern: TokenList,
+    ) -> Optional[tuple[Token, Token]]:
+
+        surname_token = surname_pattern[0]
+        start_token = token
+
+        while True:
+            if not str_match(surname_token.text, token.text, max_edit_distance=1):
+                return None
+
+            match_end_token = token
+
+            surname_token = cls._next_with_skip(surname_token)
+            token = cls._next_with_skip(token)
+
+            if surname_token is None:
+                return start_token, match_end_token  # end of pattern
+
+            if token is None:
+                return None  # end of tokens
+
+    @classmethod
+    def _next_with_skip(cls, token: Token) -> Optional[Token]:
+        """Find the next token, while skipping certain punctuation."""
+
+        next_token = token.next()
+        while next_token in cls._skip:
+            next_token = next_token.next()
+        return next_token
+
+    def annotate(self, doc: Document) -> list[Annotation]:
+        """
+        Annotates the document, based on the patient metadata.
+
+        Args:
+            doc: The input document.
+
+        Returns: A document with any relevant Annotations added.
+        """
+
+        if doc.metadata is None or not doc.metadata[self.meta_key]:
+            return []
+
+        matchers = self._build_matchers_for_doc(doc)
+        annotations = []
+        for token in doc.get_tokens():
+            for matcher, name, tag in matchers:
+                match = matcher(token, name)
+                if match is None:
+                    continue
+                start_token, end_token = match
+                annotations.append(
+                    Annotation(
+                        text=doc.text[start_token.start_char : end_token.end_char],
+                        start_char=start_token.start_char,
+                        end_char=end_token.end_char,
+                        tag=tag,
+                        priority=self.priority,
+                        start_token=start_token,
+                        end_token=end_token,
+                    )
+                )
+
+        return annotations
+
+    def _build_matchers_for_doc(self, doc):
+        # Find attributes (first, initials, last) to be annotated.
+        meta_defs = doc.metadata[self.meta_key]
+        attrs_by_def = (filter(lambda a: hasattr(meta_def, a), self._attrs)
+                        for meta_def in meta_defs)
+        attrs_present = reduce(set.union, attrs_by_def, set())
+
+        # Build the list of matchers for the configured names.
+        matchers = []
+        for matcher, attr, tag in self._matcher_attr_tags:
+            if attr not in attrs_present:
+                continue
+            for meta_def in meta_defs:
+                if (name := getattr(meta_def, attr)) is not None:
+                    # XXX Special handling for surnames (necessary why?).
+                    if attr == "surname":
+                        surname_tokens = self.tokenizer.tokenize(name)
+                        matchers.append((matcher, surname_tokens, tag))
+                    # XXX Special handling for first names -- may be multiple.
+                    elif attr == "first_names":
+                        for fname in name:
+                            matchers.append((matcher, fname, tag))
+                    # The only normal case -- initials.
+                    else:
+                        matchers.append((matcher, name, tag))
+
+        return matchers
+
+
+class PatientNameAnnotator(DynamicNameAnnotator):
     """
     Annotates patient names, based on information present in document metadata. This
     class implements logic for detecting first name(s), initials and surnames.

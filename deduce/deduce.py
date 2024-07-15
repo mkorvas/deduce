@@ -133,6 +133,8 @@ class Deduce(dd.DocDeid):  # pylint: disable=R0903
 
         if load_base_config:
 
+            logging.debug("Going to load the base config from \"%s\".",
+                          _BASE_CONFIG_FILE)
             with open(_BASE_CONFIG_FILE, "r", encoding="utf-8") as file:
                 base_config = json.load(file)
 
@@ -140,8 +142,12 @@ class Deduce(dd.DocDeid):  # pylint: disable=R0903
 
         if user_config is not None:
             if isinstance(user_config, str):
+                logging.debug("Going to load a user config from \"%s\".",
+                              user_config)
                 with open(user_config, "r", encoding="utf-8") as file:
                     user_config = json.load(file)
+            else:
+                logging.debug("Going to load a user config from a dict.")
 
             utils.overwrite_dict(config, user_config)
 
@@ -248,7 +254,7 @@ class _DeduceProcessorLoader:  # pylint: disable=R0903
         for annotator_name, annotator_info in config.items():
 
             group = self._get_or_create_annotator_group(
-                annotator_info.get("group", None), processors=annotators
+                annotator_info.get("group"), processors=annotators
             )
 
             annotator_type = annotator_info["annotator_type"]
@@ -256,8 +262,15 @@ class _DeduceProcessorLoader:  # pylint: disable=R0903
 
             if annotator_type in annotator_creators:
                 annotator = annotator_creators[annotator_type](args, extras)
+                logging.debug("Loaded %s (a %s in the group %s) using a builtin "
+                              "annotation creator.",
+                              annotator_name, annotator_type,
+                              annotator_info.get("group"))
             else:
                 annotator = self._get_annotator_from_class(annotator_type, args, extras)
+                logging.debug("Loaded %s (a %s in the group %s) using introspection.",
+                              annotator_name, annotator_type,
+                              annotator_info.get("group"))
 
             group.add_processor(annotator_name, annotator)
 

@@ -9,7 +9,11 @@ def link_tokens(tokens: list[dd.Token]):
     return tokens
 
 
-def linked_tokens(tokens: list[str]) -> list[dd.Token]:
-    tokens = [dd.Token(x, 0, len(x)) for x in tokens]
+def linked_tokens(words: list[str]) -> list[dd.Token]:
+    tokens = []
+    cidx = 0
+    for word in words:
+        tokens.append(dd.Token(word, cidx, cidx + len(word)))
+        cidx += len(word) + 1
 
     return link_tokens(tokens)

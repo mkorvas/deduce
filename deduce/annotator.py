@@ -5,11 +5,11 @@ import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
-from functools import reduce
 from itertools import islice
 from typing import Optional
 
 import docdeid as dd
+from deduce.person import Person
 from deduce.utils import str_match
 from docdeid import Annotation, Document, Token, Tokenizer
 from docdeid.direction import Direction
@@ -197,26 +197,10 @@ class DynamicNameAnnotator(dd.process.Annotator):
         self.meta_key = meta_key
         self.tokenizer = tokenizer
 
-        self._matcher_attr_tags = (
-            (DynamicNameAnnotator._match_first_names,
-             "first_names",
-             f"voornaam_{meta_key}"),
-            (DynamicNameAnnotator._match_initial_from_name,
-             "first_names",
-             f"initiaal_{meta_key}"),
-            (DynamicNameAnnotator._match_initials,
-             "initials",
-             f"initiaal_{meta_key}"),
-            (DynamicNameAnnotator._match_surname,
-             "surname",
-             f"achternaam_{meta_key}"),
-        )
-        self._attrs = set(tup[1] for tup in self._matcher_attr_tags)
-
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def _match_first_names(
+    def _match_first_name(
             cls,
             token: Token,
             name: str,
@@ -306,52 +290,75 @@ class DynamicNameAnnotator(dd.process.Annotator):
         matchers = self._build_matchers_for_doc(doc)
         annotations = []
         for token in doc.get_tokens():
-            for matcher, name, tag in matchers:
-                match = matcher(token, name)
-                if match is None:
-                    continue
-                start_token, end_token = match
-                annotations.append(
-                    Annotation(
-                        text=doc.text[start_token.start_char : end_token.end_char],
-                        start_char=start_token.start_char,
-                        end_char=end_token.end_char,
-                        tag=tag,
-                        priority=self.priority,
-                        start_token=start_token,
-                        end_token=end_token,
-                    )
-                )
+            token_annos = self._annotate_token(doc, token, matchers)
+            annotations.extend(token_annos)
 
         return annotations
 
+    def _annotate_token(self, doc, token, matchers):
+        for matcher, name, tag in matchers:
+            match = matcher(token, name)
+            if match is None:
+                continue
+            start_token, end_token = match
+            yield Annotation(
+                    text=doc.text[start_token.start_char: end_token.end_char],
+                    start_char=start_token.start_char,
+                    end_char=end_token.end_char,
+                    tag=tag,
+                    priority=self.priority,
+                    start_token=start_token,
+                    end_token=end_token,
+                )
+
     def _build_matchers_for_doc(self, doc):
-        # Find attributes (first, initials, last) to be annotated.
-        meta_defs = doc.metadata[self.meta_key]
-        attrs_by_def = (filter(lambda a: hasattr(meta_def, a), self._attrs)
-                        for meta_def in meta_defs)
-        attrs_present = reduce(set.union, attrs_by_def, set())
+        # Find relevant metadata definitions. For sake of backward compatibility
+        # (the PatientNameAnnotator), support not only list-typed values but also a
+        # single Person object.
+        meta_def = doc.metadata[self.meta_key]
+        meta_defs = ((meta_def, ) if isinstance(meta_def, Person) else
+                     () if meta_def is None else
+                     meta_def)
 
         # Build the list of matchers for the configured names.
         matchers = []
-        for matcher, attr, tag in self._matcher_attr_tags:
-            if attr not in attrs_present:
-                continue
-            for meta_def in meta_defs:
-                if (name := getattr(meta_def, attr)) is not None:
-                    # XXX Special handling for surnames (necessary why?).
-                    if attr == "surname":
-                        surname_tokens = self.tokenizer.tokenize(name)
-                        matchers.append((matcher, surname_tokens, tag))
-                    # XXX Special handling for first names -- may be multiple.
-                    elif attr == "first_names":
-                        for fname in name:
-                            matchers.append((matcher, fname, tag))
-                    # The only normal case -- initials.
-                    else:
-                        matchers.append((matcher, name, tag))
+        if meta_defs:
+            matchers.extend(self._build_matchers_for_fn(meta_defs))
+            matchers.extend(self._build_matchers_for_inits(meta_defs))
+            matchers.extend(self._build_matchers_for_ln(meta_defs))
+        matchers.extend(self._build_matchers_for_ln_pat(doc.metadata))
 
         return matchers
+
+    def _build_matchers_for_fn(self, meta_defs):
+        for meta_def in meta_defs:
+            for name in getattr(meta_def, 'first_names', ()):
+                yield (DynamicNameAnnotator._match_first_name,
+                       name,
+                       f'voornaam_{self.meta_key}')
+                yield (DynamicNameAnnotator._match_initial_from_name,
+                       name,
+                       f'initiaal_{self.meta_key}')
+
+    def _build_matchers_for_inits(self, meta_defs):
+        for meta_def in meta_defs:
+            if initials := getattr(meta_def, 'initials'):
+                yield (DynamicNameAnnotator._match_initials,
+                       initials,
+                       f'initiaal_{self.meta_key}')
+
+    def _build_matchers_for_ln(self, meta_defs):
+        for meta_def in meta_defs:
+            if surname := getattr(meta_def, 'surname'):
+                yield (DynamicNameAnnotator._match_surname,
+                       self.tokenizer.tokenize(surname),
+                       f'achternaam_{self.meta_key}')
+
+    def _build_matchers_for_ln_pat(self, metadata):
+        if surname_pat := metadata['surname_pattern']:
+            yield (DynamicNameAnnotator._match_surname,
+                   surname_pat,
+                   f'achternaam_{self.meta_key}')
 
 
 class PatientNameAnnotator(DynamicNameAnnotator):
@@ -366,143 +373,14 @@ class PatientNameAnnotator(DynamicNameAnnotator):
 
     def __init__(self, tokenizer: Tokenizer, *args, **kwargs) -> None:
 
-        self.tokenizer = tokenizer
-        self.skip = [".", "-", " "]
+        # Parse arguments intended for the antecedent classes.
+        par_kwargs = dict(kwargs)
+        if args:
+            par_kwargs['tag'] = args[0]
+            if len(args) >= 2:
+                par_kwargs['priority'] = args[1]
 
-        super().__init__(*args, **kwargs)
-
-    @staticmethod
-    def _match_first_names(
-        doc: Document, token: Token
-    ) -> Optional[tuple[Token, Token]]:
-
-        for first_name in doc.metadata["patient"].first_names:
-
-            if str_match(token.text, first_name) or (
-                len(token.text) > 3
-                and str_match(token.text, first_name, max_edit_distance=1)
-            ):
-                return token, token
-
-        return None
-
-    @staticmethod
-    def _match_initial_from_name(
-        doc: Document, token: Token
-    ) -> Optional[tuple[Token, Token]]:
-
-        for _, first_name in enumerate(doc.metadata["patient"].first_names):
-            if str_match(token.text, first_name[0]):
-                next_token = token.next()
-
-                if (next_token is not None) and str_match(next_token.text, "."):
-                    return token, next_token
-
-                return token, token
-
-        return None
-
-    @staticmethod
-    def _match_initials(doc: Document, token: Token) -> Optional[tuple[Token, Token]]:
-
-        if str_match(token.text, doc.metadata["patient"].initials):
-            return token, token
-
-        return None
-
-    def next_with_skip(self, token: Token) -> Optional[Token]:
-        """Find the next token, while skipping certain punctuation."""
-
-        while True:
-            token = token.next()
-
-            if (token is None) or (token not in self.skip):
-                break
-
-        return token
-
-    def _match_surname(
-        self, doc: Document, token: Token
-    ) -> Optional[tuple[Token, Token]]:
-
-        if doc.metadata["surname_pattern"] is None:
-            doc.metadata["surname_pattern"] = self.tokenizer.tokenize(
-                doc.metadata["patient"].surname
-            )
-
-        surname_pattern = doc.metadata["surname_pattern"]
-
-        surname_token = surname_pattern[0]
-        start_token = token
-
-        while True:
-            if not str_match(surname_token.text, token.text, max_edit_distance=1):
-                return None
-
-            match_end_token = token
-
-            surname_token = self.next_with_skip(surname_token)
-            token = self.next_with_skip(token)
-
-            if surname_token is None:
-                return start_token, match_end_token  # end of pattern
-
-            if token is None:
-                return None  # end of tokens
-
-    def annotate(self, doc: Document) -> list[Annotation]:
-        """
-        Annotates the document, based on the patient metadata.
-
-        Args:
-            doc: The input document.
-
-        Returns: A document with any relevant Annotations added.
-        """
-
-        if doc.metadata is None or doc.metadata["patient"] is None:
-            return []
-
-        matcher_to_attr = {
-            self._match_first_names: ("first_names", "voornaam_patient"),
-            self._match_initial_from_name: ("first_names", "initiaal_patient"),
-            self._match_initials: ("initials", "initiaal_patient"),
-            self._match_surname: ("surname", "achternaam_patient"),
-        }
-
-        matchers = []
-        patient_metadata = doc.metadata["patient"]
-
-        for matcher, (attr, tag) in matcher_to_attr.items():
-            if getattr(patient_metadata, attr) is not None:
-                matchers.append((matcher, tag))
-
-        annotations = []
-
-        for token in doc.get_tokens():
-
-            for matcher, tag in matchers:
-
-                match = matcher(doc, token)
-
-                if match is None:
-                    continue
-
-                start_token, end_token = match
-
-                annotations.append(
-                    Annotation(
-                        text=doc.text[start_token.start_char : end_token.end_char],
-                        start_char=start_token.start_char,
-                        end_char=end_token.end_char,
-                        tag=tag,
-                        priority=self.priority,
-                        start_token=start_token,
-                        end_token=end_token,
-                    )
-                )
-
-        return annotations
+        super().__init__('patient', tokenizer, **par_kwargs)
 
 
 class RegexpPseudoAnnotator(RegexpAnnotator):

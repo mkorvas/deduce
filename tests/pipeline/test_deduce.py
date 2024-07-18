@@ -128,13 +128,13 @@ class TestDeduce:
             "Lorem ipsum JANSEN sit amet, Peter Jansen adipiscing elit. "
             "Curabitur J. Jansen sapien, J. P. Jansen a vestibulum quis, "
             "facilisis vel J Jansen. Jan de Visser iaculis gravida nulla. "
-            "Etiam quis Jan van den Jansen."
+            "Etiam quis Jan van den Jansen. Integer rutrum, Killaars P."
         )
         want = (
             "Lorem ipsum [PATIENT] sit amet, [PERSOON-1] adipiscing elit. "
             "Curabitur [PATIENT] sapien, [PERSOON-2] a vestibulum quis, "
             "facilisis vel [PATIENT]. [PERSOON-3] iaculis gravida nulla. "
-            "Etiam quis [PERSOON-4]."
+            "Etiam quis [PERSOON-4]. Integer rutrum, [PERSOON-5]."
         )
 
         deid = model.deidentify(doc, metadata=metadata)

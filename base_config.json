@@ -246,6 +246,20 @@
             ]
           },
           {
+            "name": "initial_right",
+            "direction": "right",
+            "pre_tag": [
+              "achternaam",
+              "achternaam_patient"
+            ],
+            "tag": "{tag}+initiaal",
+            "pattern": [
+              {
+                "lookup": "initial"
+              }
+            ]
+          },
+          {
             "name": "naam_left",
             "direction": "left",
             "pre_tag": [

@@ -424,7 +424,7 @@
       "annotator_type": "docdeid.process.RegexpAnnotator",
       "group": "locations",
       "args": {
-        "regexp_pattern": "(\\d{4}([A-Za-z]{2}| [A-Z]{2}))(?<!mg|MG|gr|ie)(\\W|$)",
+        "regexp_pattern": "(?<![a-zA-Z0-9])(\\d{4}([A-Za-z]{2}| [A-Z]{2}))(?<!mg|MG|gr|ie)(\\W|$)",
         "capturing_group": 1,
         "tag": "locatie"
       }
@@ -433,7 +433,7 @@
       "annotator_type": "docdeid.process.RegexpAnnotator",
       "group": "locations",
       "args": {
-        "regexp_pattern": "([Pp]ostbus\\s\\d{1,5}(\\.\\d{2,4})?)",
+        "regexp_pattern": "(?<![a-zA-Z0-9])([Pp]ostbus\\s\\d{1,5}(\\.\\d{2,4})?)",
         "tag": "locatie",
         "pre_match_words": ["postbus"]
       }

@@ -9,6 +9,7 @@ text = (
     "jaar oud en woonachtig in Utrecht, IJSWEG 10r. Hij werd op 10 oktober 2018 door "
     "arts Peter de Visser ontslagen van de kliniek van het UMCU. Voor nazorg kan hij "
     "worden bereikt via j.JNSEN.123@gmail.com of (06)12345678. "
+    "Thuismedicatie: X-Cure 25000 IE/ml; "
     "Vader, PETER Jansen, 104 jr, woont ook in Utrecht. Met collegiale groeten, "
     "Jan de Visser."
     # FIXME "aan de" is joined to one token (due to "lst_interfix/items.txt"),
@@ -64,12 +65,12 @@ class TestDeduce:
             ),
             dd.Annotation(text="UMCU", start_char=214, end_char=218, tag="ziekenhuis"),
             dd.Annotation(
-                text="PETER Jansen", start_char=305, end_char=317, tag="persoon"
+                text="PETER Jansen", start_char=341, end_char=353, tag="persoon"
             ),
-            dd.Annotation(text="104", start_char=319, end_char=322, tag="leeftijd"),
-            dd.Annotation(text="Utrecht", start_char=340, end_char=347, tag="locatie"),
+            dd.Annotation(text="104", start_char=355, end_char=358, tag="leeftijd"),
+            dd.Annotation(text="Utrecht", start_char=376, end_char=383, tag="locatie"),
             dd.Annotation(
-                text="Jan de Visser", start_char=373, end_char=386, tag="persoon"
+                text="Jan de Visser", start_char=409, end_char=422, tag="persoon"
             ),
         }
 
@@ -84,7 +85,9 @@ class TestDeduce:
             "[LEEFTIJD-1] jaar oud en woonachtig in [LOCATIE-1], [LOCATIE-2]. Hij werd "
             "op [DATUM-1] door arts [PERSOON-1] ontslagen van de kliniek van het "
             "[ZIEKENHUIS-1]. Voor nazorg kan hij worden bereikt via [EMAILADRES-1] "
-            "of [TELEFOONNUMMER-1]. Vader, [PERSOON-2], [LEEFTIJD-2] jr, woont "
+            "of [TELEFOONNUMMER-1]. "
+            "Thuismedicatie: X-Cure 25000 IE/ml; "
+            "Vader, [PERSOON-2], [LEEFTIJD-2] jr, woont "
             # XXX Btw, if we wanted more perfect security, we should
             #   not give away whether two mentions of age (or street or
             #   anything) were equal before deidentification or not.
@@ -108,9 +111,10 @@ class TestDeduce:
             "Visser</PERSOON> ontslagen van de kliniek van het "
             "<ZIEKENHUIS>UMCU</ZIEKENHUIS>. Voor nazorg kan hij worden "
             "bereikt via <EMAILADRES>j.JNSEN.123@gmail.com</EMAILADRES> of "
-            "<TELEFOONNUMMER>(06)12345678</TELEFOONNUMMER>."
+            "<TELEFOONNUMMER>(06)12345678</TELEFOONNUMMER>. "
             # " De patient lijdt aan de Quervain ziekte."
-            " Vader, <PERSOON>PETER Jansen</PERSOON>, "
+            "Thuismedicatie: X-Cure 25000 IE/ml; "
+            "Vader, <PERSOON>PETER Jansen</PERSOON>, "
             "<LEEFTIJD>104</LEEFTIJD> jr, woont ook in "
             "<LOCATIE>Utrecht</LOCATIE>. Met collegiale groeten, "
             "<PERSOON>Jan de Visser</PERSOON>."

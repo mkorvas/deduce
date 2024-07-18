@@ -9,7 +9,7 @@ text = (
     "jaar oud en woonachtig in Utrecht, IJSWEG 10r. Hij werd op 10 oktober 2018 door "
     "arts Peter de Visser ontslagen van de kliniek van het UMCU. Voor nazorg kan hij "
     "worden bereikt via j.JNSEN.123@gmail.com of (06)12345678. "
-    "Vader, Peter Jansen, 104 jr, woont ook in Utrecht. Met collegiale groeten, "
+    "Vader, PETER Jansen, 104 jr, woont ook in Utrecht. Met collegiale groeten, "
     "Jan de Visser."
     # FIXME "aan de" is joined to one token (due to "lst_interfix/items.txt"),
     #   preventing "de Quervain ziekte" from matching. Furthermore, when I
@@ -64,7 +64,7 @@ class TestDeduce:
             ),
             dd.Annotation(text="UMCU", start_char=214, end_char=218, tag="ziekenhuis"),
             dd.Annotation(
-                text="Peter Jansen", start_char=305, end_char=317, tag="persoon"
+                text="PETER Jansen", start_char=305, end_char=317, tag="persoon"
             ),
             dd.Annotation(text="104", start_char=319, end_char=322, tag="leeftijd"),
             dd.Annotation(text="Utrecht", start_char=340, end_char=347, tag="locatie"),
@@ -110,7 +110,7 @@ class TestDeduce:
             "bereikt via <EMAILADRES>j.JNSEN.123@gmail.com</EMAILADRES> of "
             "<TELEFOONNUMMER>(06)12345678</TELEFOONNUMMER>."
             # " De patient lijdt aan de Quervain ziekte."
-            " Vader, <PERSOON>Peter Jansen</PERSOON>, "
+            " Vader, <PERSOON>PETER Jansen</PERSOON>, "
             "<LEEFTIJD>104</LEEFTIJD> jr, woont ook in "
             "<LOCATIE>Utrecht</LOCATIE>. Met collegiale groeten, "
             "<PERSOON>Jan de Visser</PERSOON>."

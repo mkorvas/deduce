@@ -84,7 +84,9 @@ def load_first_name_lookup(
 ) -> dd.ds.LookupTrie:
     """Load first_name LookupTrie."""
 
-    first_name = dd.ds.LookupSet()
+    first_name = dd.ds.LookupSet(
+        matching_pipeline=[dd.str.LowercaseTail()]
+    )
 
     first_name.add_items_from_iterable(
         raw_itemsets["first_name"],

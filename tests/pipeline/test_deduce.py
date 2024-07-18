@@ -139,3 +139,29 @@ class TestDeduce:
 
         deid = model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
+
+    def test_single_initial(self, model):
+        metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
+        doc = "J-katheter plaatsing. Plaatsen J Ch 3/15 links. MCG, XYZ"
+        want = doc
+
+        deid = model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want
+
+    def test_single_initial_unicode(self, model):
+        metadata = {"patient": Person(first_names=["Raf", "Ňaf", "Ỗlaf"])}
+        doc = "Patient heet R.Ň.Ỗ. Type ECG: Ň 2000 m/R."
+        want = "Patient heet [PATIENT] Type ECG: Ň 2000 m/R."
+
+        deid = model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want
+
+        doc_upper2 = "Patient heet r.Ň.Ỗ. Type ECG: Ň 2000 m/R."
+        want_upper2 = "Patient heet r.[PATIENT] Type ECG: Ň 2000 m/R."
+        deid2 = model.deidentify(doc_upper2, metadata=metadata)
+        assert deid2.deidentified_text == want_upper2
+
+        doc_upper1 = "Patient heet r.ň.Ỗ. Type ECG: Ň 2000 m/R."
+        want_upper1 = doc_upper1
+        deid3 = model.deidentify(doc_upper1, metadata=metadata)
+        assert deid3.deidentified_text == want_upper1

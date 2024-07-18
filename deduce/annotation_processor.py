@@ -1,7 +1,8 @@
 """Contains components for processing AnnotationSet."""
+from abc import abstractmethod
 
 import docdeid as dd
-from docdeid import AnnotationSet
+from docdeid import AnnotationSet, Annotation
 from frozendict import frozendict
 
 
@@ -144,16 +145,47 @@ class PersonAnnotationConverter(dd.process.AnnotationProcessor):
         )
 
 
-class RemoveAnnotations(dd.process.AnnotationProcessor):
+class FilterAnnotations(dd.process.AnnotationProcessor):
+    """Filters annotation by a predicate."""
+
+    @abstractmethod
+    def should_keep(self, anno: Annotation) -> bool:
+        """Determines whether the `anno` annotation should be retained."""
+
+    def process_annotations(
+            self, annotations: AnnotationSet, text: str
+    ) -> AnnotationSet:
+        return AnnotationSet(filter(self.should_keep, annotations))
+
+
+class RemoveAnnotations(FilterAnnotations):
     """Removes all annotations with corresponding tags."""
 
     def __init__(self, tags: list[str]) -> None:
         self.tags = tags
 
-    def process_annotations(
-        self, annotations: AnnotationSet, text: str
-    ) -> AnnotationSet:
-        return AnnotationSet(a for a in annotations if a.tag not in self.tags)
+    def should_keep(self, anno: Annotation) -> bool:
+        return anno.tag not in self.tags
+
+
+class RemoveSingleInitial(FilterAnnotations):
+    """\
+    Removes all annotations of initials that contain only a single capital letter.
+
+    This annotator should be downstream of `DeduceMergeAdjacentAnnotations`,
+    otherwise it might remove *all* annotations of people's initials.
+    """
+
+    def should_keep(self, anno: Annotation) -> bool:
+        if 'initiaal' in anno.tag:
+            # Try to take 2 uppercase letters from the mention.
+            uppers = filter(str.isupper, anno.text)
+            try:
+                next(uppers)
+                next(uppers)
+            except StopIteration:
+                return False
+        return True
 
 
 class CleanAnnotationTag(dd.process.AnnotationProcessor):

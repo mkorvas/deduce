@@ -21,6 +21,7 @@ from deduce.annotation_processor import (
     DeduceMergeAdjacentAnnotations,
     PersonAnnotationConverter,
     RemoveAnnotations,
+    RemoveSingleInitial,
 )
 from deduce.lookup_struct_loader import load_interfix_lookup, load_prefix_lookup
 from deduce.lookup_structs import get_lookup_structs, load_raw_itemsets
@@ -328,6 +329,11 @@ class _DeduceProcessorLoader:  # pylint: disable=R0903
             DeduceMergeAdjacentAnnotations(
                 slack_regexp=config["adjacent_annotations_slack"], check_overlap=False
             ),
+        )
+
+        post_group.add_processor(
+            "remove_single_initial",
+            RemoveSingleInitial(),
         )
 
         post_group.add_processor(

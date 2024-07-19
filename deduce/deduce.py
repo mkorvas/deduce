@@ -25,7 +25,7 @@ from deduce.annotation_processor import (
 )
 from deduce.lookup_struct_loader import load_interfix_lookup, load_prefix_lookup
 from deduce.lookup_structs import get_lookup_structs, load_raw_itemsets
-from deduce.redactor import DeduceRedactor
+from deduce.redactor import DeduceRedactor, DateStrategy
 from deduce.tokenizer import DeduceTokenizer
 
 __version__ = importlib.metadata.version(__package__ or __name__)
@@ -351,11 +351,16 @@ class _DeduceProcessorLoader:  # pylint: disable=R0903
             ),
         )
 
+        date_strategy = (
+            DateStrategy("shift", config.get("redactor_date_strategy_init_shift"))
+            if config.get("redactor_date_strategy") == "shift"
+            else None)
         post_group.add_processor(
             "redactor",
             DeduceRedactor(
                 open_char=config["redactor_open_char"],
                 close_char=config["redactor_close_char"],
+                date_strategy=date_strategy,
             ),
         )
 

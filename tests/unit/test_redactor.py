@@ -1,6 +1,6 @@
 import docdeid as dd
 
-from deduce.redactor import DeduceRedactor
+from deduce.redactor import DeduceRedactor, DateStrategy
 
 
 class TestDeduceRedactor:
@@ -77,5 +77,22 @@ class TestDeduceRedactor:
         expected_text = (
             "Jan Jansen, wonende in [WOONPLAATS-1], verhuisd vanuit [WOONPLAATS-1]"
         )
+
+        assert proc.redact(text, annotations) == expected_text
+
+    def test_shift_date(self):
+        proc = DeduceRedactor(date_strategy=DateStrategy("shift", 7))
+        text = "2024-07-29 t/m 28. dec 24"
+
+        annotations = dd.AnnotationSet(
+            [
+                dd.Annotation(text="2024-07-29", start_char=0, end_char=10,
+                              tag="datum"),
+                dd.Annotation(text="28. dec 24", start_char=15, end_char=25,
+                              tag="datum"),
+            ]
+        )
+
+        expected_text = "2024-08-05 t/m 4. jan 25"
 
         assert proc.redact(text, annotations) == expected_text

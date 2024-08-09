@@ -1,3 +1,4 @@
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -126,14 +127,17 @@ class DateStrategy:
             return anno.text
         if len(date_parts) > 3:
             # Unusual date format or not a date, don't know how to handle.
-            # TODO Log an error.
+            logging.error('Failed to parse "%s" as a valid date: too many parts',
+                          anno.text)
             return anno.text
         if len(date_parts) <= 2:
-            # TODO day+month or month+year?
+            logging.error('Failed to parse "%s" as a valid date: just 2 parts',
+                          anno.text)
             return anno.text
         m_parse = try_parse_month(date_parts[1])
         if m_parse is None:
-            # TODO Log an error.
+            logging.error('Failed to parse "%s" as a valid date: cannot parse month',
+                          anno.text)
             return anno.text
         d_parse = try_parse_day(date_parts[0])
         y_parse = try_parse_year(date_parts[2])
@@ -145,11 +149,23 @@ class DateStrategy:
             if d_parse is not None and y_parse is not None:
                 year_idx = 0
             else:
-                # TODO Log an error.
+                if d_parse is None:
+                    logging.error(
+                        'Failed to parse "%s" as a valid date: cannot parse day',
+                        anno.text)
+                if y_parse is None:
+                    logging.error(
+                        'Failed to parse "%s" as a valid date: cannot parse year',
+                        anno.text)
                 return anno.text
 
         # Shift.
-        shifted = date(y_parse[0], m_parse[0], d_parse[0]) + timedelta(days=self._shift)
+        try:
+            shifted = date(y_parse[0], m_parse[0], d_parse[0]) + timedelta(days=self._shift)
+        except ValueError as e:
+            logging.error('Failed to parse "%s" as a valid date: %s',
+                          anno.text, e)
+            return anno.text
 
         # Format.
         joiners = _DATE_SPLITTER_RX.findall(anno.text)

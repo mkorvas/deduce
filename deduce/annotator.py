@@ -1,5 +1,6 @@
 """Contains components for annotating."""
 
+import logging
 import re
 import warnings
 from collections import defaultdict
@@ -96,6 +97,9 @@ class ContextAnnotator(Annotator):
 
         last_anno_token = (annotation.end_token if dir_ is Direction.RIGHT else
                            annotation.start_token)
+        if last_anno_token is None:
+            logging.error('annotation without start or end token: %s', annotation)
+            return annotation
         skip = context_pattern.seq_pattern.skip
         following_tokens = islice(last_anno_token.iter_to(dir_), 1, None)
         nonskip_tokens = (token for token in following_tokens

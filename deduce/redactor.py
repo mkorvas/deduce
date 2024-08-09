@@ -99,6 +99,7 @@ class DateStrategy:
             stay_id = None if metadata is None else metadata['stay_id']
             if stay_id is not None and stay_id == self._last_stay_id:
                 return
+            self._last_stay_id = stay_id
             # Initialize randomizer the first time.
             if self._random is None:
                 if self.init_shift is None:
@@ -107,7 +108,6 @@ class DateStrategy:
                     # When specified, make sure to use init_shift, not a random number.
                     self._random = Random(424242 - self.init_shift)  # whatever
                     self._shift = self.init_shift
-                    self._last_stay_id = stay_id
                     return
             # Compute a random shift amount.
             rand_shift = self._random.randint(-61, 60)

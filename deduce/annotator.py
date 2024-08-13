@@ -6,6 +6,7 @@ import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
+from functools import partial
 from itertools import islice
 from typing import Optional
 
@@ -188,6 +189,10 @@ class DynamicNameAnnotator(dd.process.Annotator):
         meta_key: Key in the metadata dict that (when present) contains the list of
                   person names for this annotator.
         tokenizer: A tokenizer to use for surnames defined in the metadata.
+        tolerance: Maximum edit distance allowed for words longer than 3 characters.
+                   Default: 1.
+        *args, **kwargs: Passed through to the `Annotator` constructor (which accepts
+            the arguments `tag` and `priority`).
     """
 
     _skip = [".", "-", " "]
@@ -195,11 +200,13 @@ class DynamicNameAnnotator(dd.process.Annotator):
     def __init__(self,
                  meta_key: str,
                  tokenizer: Tokenizer,
+                 tolerance: int = 1,
                  *args,
                  **kwargs) -> None:
 
         self.meta_key = meta_key
         self.tokenizer = tokenizer
+        self.tolerance = tolerance
 
         super().__init__(*args, **kwargs)
 
@@ -208,9 +215,10 @@ class DynamicNameAnnotator(dd.process.Annotator):
             cls,
             token: Token,
             name: str,
+            max_tolerance: int = 1,
     ) -> Optional[tuple[Token, Token]]:
 
-        tolerance = 1 if len(token.text) > 3 else 0
+        tolerance = max_tolerance if len(token.text) > 3 else 0
         if str_match(token.text, name, max_edit_distance=tolerance):
             return token, token
         else:
@@ -249,13 +257,15 @@ class DynamicNameAnnotator(dd.process.Annotator):
             cls,
             token: Token,
             surname_pattern: TokenList,
+            max_tolerance: int = 1,
     ) -> Optional[tuple[Token, Token]]:
 
         surname_token = surname_pattern[0]
         start_token = token
 
         while True:
-            if not str_match(surname_token.text, token.text, max_edit_distance=1):
+            if not str_match(surname_token.text, token.text,
+                             max_edit_distance=max_tolerance):
                 return None
 
             match_end_token = token
@@ -335,9 +345,11 @@ class DynamicNameAnnotator(dd.process.Annotator):
         return matchers
 
     def _build_matchers_for_fn(self, meta_defs):
+        self_fn_matcher = partial(DynamicNameAnnotator._match_first_name,
+                                  max_tolerance=self.tolerance)
         for meta_def in meta_defs:
             for name in getattr(meta_def, 'first_names', ()):
-                yield (DynamicNameAnnotator._match_first_name,
+                yield (self_fn_matcher,
                        name,
                        f'voornaam_{self.meta_key}')
                 yield (DynamicNameAnnotator._match_initial_from_name,
@@ -352,9 +364,11 @@ class DynamicNameAnnotator(dd.process.Annotator):
                        f'initiaal_{self.meta_key}')
 
     def _build_matchers_for_ln(self, meta_defs):
+        self_ln_matcher = partial(DynamicNameAnnotator._match_surname,
+                                  max_tolerance=self.tolerance)
         for meta_def in meta_defs:
             if surname := getattr(meta_def, 'surname'):
-                yield (DynamicNameAnnotator._match_surname,
+                yield (self_ln_matcher,
                        self.tokenizer.tokenize(surname),
                        f'achternaam_{self.meta_key}')
 
@@ -371,8 +385,9 @@ class PatientNameAnnotator(DynamicNameAnnotator):
     class implements logic for detecting first name(s), initials and surnames.
 
     Args:
-        tokenizer: A tokenizer, that is used for breaking up the patient surname
+        tokenizer: A tokenizer, used for breaking up the patient surname
             into multiple tokens.
+        *args, **kwargs: passed on to :class:`DynamicNameAnnotator`
     """
 
     def __init__(self, tokenizer: Tokenizer, *args, **kwargs) -> None:

@@ -13,6 +13,7 @@ from deduce.annotator import (
     PhoneNumberAnnotator,
     RegexpPseudoAnnotator
 )
+from docdeid import Annotation
 from docdeid.direction import Direction
 from docdeid.process.annotator import (
     as_token_pattern,
@@ -23,6 +24,9 @@ from docdeid.process.annotator import (
 from deduce.person import Person
 from deduce.tokenizer import DeduceTokenizer
 from tests.helpers import linked_tokens
+
+# import pydevd_pycharm
+# pydevd_pycharm.settrace()
 
 
 @pytest.fixture
@@ -92,129 +96,201 @@ def surname_pattern():
 def token(text: str):
     return dd.Token(text=text, start_char=0, end_char=len(text))
 
+@pytest.fixture
+def ip_pavlov():
+    tokens = linked_tokens(["Uw", "patient", "I", ".", "P", ".", "Pavlov", "is",
+                            "overleden"])
+    return {
+        'text': "Uw patient I . P . Pavlov is overleden",
+        'tokens': tokens,
+        'annos': [
+            Annotation(tag='initiaal', text='I .',
+                       start_char=11, start_token=tokens[2],
+                       end_char=14, end_token=tokens[3]),
+            Annotation(tag='initiaal', text='P .',
+                       start_char=15, start_token=tokens[4],
+                       end_char=18, end_token=tokens[5]),
+            Annotation(tag='persoon', text='I . P . Pavlov',
+                       start_char=11, start_token=tokens[2],
+                       end_char=25, end_token=tokens[6]),
+            Annotation(tag='persoon', text='Pavlov',
+                       start_char=19, start_token=tokens[6],
+                       end_char=25, end_token=tokens[6]),
+        ]
+    }
 
 class TestPositionMatcher:
     def test_equal(self):
-        assert _PatternPositionMatcher.match({"equal": "test"}, token=token("test"))
-        assert not _PatternPositionMatcher.match({"equal": "_"}, token=token("test"))
+        assert _PatternPositionMatcher.match({"equal": "test"}, token=token("test"))[0]
+        assert not _PatternPositionMatcher.match({"equal": "_"}, token=token("test"))[0]
 
     def test_equal_with_dataclass(self):
         assert _PatternPositionMatcher.match(SimpleTokenPattern("equal", "test"),
-                                             token=token("test"))
+                                             token=token("test"))[0]
 
     def test_re_match(self):
-        assert _PatternPositionMatcher.match({"re_match": "[a-z]"}, token=token("abc"))
+        assert _PatternPositionMatcher.match({"re_match": "[a-z]"},
+                                             token=token("abc"))[0]
         assert _PatternPositionMatcher.match(
             {"re_match": "[a-z]"}, token=token("abc123")
-        )
-        assert not _PatternPositionMatcher.match({"re_match": "[a-z]"}, token=token(""))
+        )[0]
+        assert not _PatternPositionMatcher.match({"re_match": "[a-z]"},
+                                                 token=token(""))[0]
         assert not _PatternPositionMatcher.match(
             {"re_match": "[a-z]"}, token=token("123")
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"re_match": "[a-z]"}, token=token("123abc")
-        )
+        )[0]
+
+    def test_tag(self, ip_pavlov):
+        assert _PatternPositionMatcher.match({"tag": "initiaal"},
+                                             annos=ip_pavlov['annos'])[0]
+        assert not _PatternPositionMatcher.match({"tag": "id"},
+                                                 annos=ip_pavlov['annos'])[0]
+
+    def test_tagged_mention(self, ip_pavlov):
+        person_match = _PatternPositionMatcher.match(
+            {"tagged_mention": "persoon"},
+            annos=ip_pavlov['annos'],
+            token=ip_pavlov['tokens'][6],
+            dir=Direction.LEFT)
+        # The longest mention spanning to the left from the 7th token having the target
+        # tag should be returned.
+        assert person_match[0]
+        assert person_match[1].text == 'I . P . Pavlov'
+
+        assert not _PatternPositionMatcher.match(
+            {"tagged_mention": "persoon"},
+            annos=ip_pavlov['annos'],
+            token=ip_pavlov['tokens'][5],
+            dir=Direction.LEFT)[0]
+        assert not _PatternPositionMatcher.match(
+            {"tagged_mention": "persoon"},
+            annos=ip_pavlov['annos'],
+            token=ip_pavlov['tokens'][7],
+            dir=Direction.LEFT)[0]
+
+        initials_match = _PatternPositionMatcher.match(
+            {"tagged_mention": "initiaal"},
+            annos=ip_pavlov['annos'],
+            token=ip_pavlov['tokens'][4],
+            dir=Direction.RIGHT)
+        assert initials_match[0]
+        assert initials_match[1].text == 'P .'
+
+        assert not _PatternPositionMatcher.match(
+            {"tagged_mention": "initiaal"},
+            annos=ip_pavlov['annos'],
+            token=ip_pavlov['tokens'][3],
+            dir=Direction.RIGHT)[0]
 
     def test_is_initials(self):
 
-        assert _PatternPositionMatcher.match({"is_initials": True}, token=token("A"))
-        assert _PatternPositionMatcher.match({"is_initials": True}, token=token("AB"))
-        assert _PatternPositionMatcher.match({"is_initials": True}, token=token("ABC"))
-        assert _PatternPositionMatcher.match({"is_initials": True}, token=token("ABCD"))
+        assert _PatternPositionMatcher.match({"is_initials": True},
+                                             token=token("A"))[0]
+        assert _PatternPositionMatcher.match({"is_initials": True},
+                                             token=token("AB"))[0]
+        assert _PatternPositionMatcher.match({"is_initials": True},
+                                             token=token("ABC"))[0]
+        assert _PatternPositionMatcher.match({"is_initials": True},
+                                             token=token("ABCD"))[0]
         assert not _PatternPositionMatcher.match(
             {"is_initials": True}, token=token("ABCDE")
-        )
-        assert not _PatternPositionMatcher.match({"is_initials": True}, token=token(""))
+        )[0]
+        assert not _PatternPositionMatcher.match({"is_initials": True},
+                                                 token=token(""))[0]
         assert not _PatternPositionMatcher.match(
             {"is_initials": True}, token=token("abcd")
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"is_initials": True}, token=token("abcde")
-        )
+        )[0]
 
     def test_match_like_name(self):
         pattern_position = {"like_name": True}
 
-        assert _PatternPositionMatcher.match(pattern_position, token=token("Diederik"))
-        assert not _PatternPositionMatcher.match(pattern_position, token=token("Le"))
+        assert _PatternPositionMatcher.match(pattern_position,
+                                             token=token("Diederik"))[0]
+        assert not _PatternPositionMatcher.match(pattern_position, token=token("Le"))[0]
         assert not _PatternPositionMatcher.match(
             pattern_position, token=token("diederik")
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             pattern_position, token=token("Diederik3")
-        )
+        )[0]
 
     def test_match_lookup(self, ds):
         assert _PatternPositionMatcher.match(
             {"lookup": "first_names"}, token=token("Andries"), ds=ds
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"lookup": "first_names"}, token=token("andries"), ds=ds
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"lookup": "surnames"}, token=token("Andries"), ds=ds
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"lookup": "first_names"}, token=token("Smit"), ds=ds
-        )
+        )[0]
         assert _PatternPositionMatcher.match(
             {"lookup": "surnames"}, token=token("Smit"), ds=ds
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"lookup": "surnames"}, token=token("smit"), ds=ds
-        )
+        )[0]
 
     def test_match_neg_lookup(self, ds):
         assert not _PatternPositionMatcher.match(
             {"neg_lookup": "first_names"}, token=token("Andries"), ds=ds
-        )
+        )[0]
         assert _PatternPositionMatcher.match(
             {"neg_lookup": "first_names"}, token=token("andries"), ds=ds
-        )
+        )[0]
         assert _PatternPositionMatcher.match(
             {"neg_lookup": "surnames"}, token=token("Andries"), ds=ds
-        )
+        )[0]
         assert _PatternPositionMatcher.match(
             {"neg_lookup": "first_names"}, token=token("Smit"), ds=ds
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"neg_lookup": "surnames"}, token=token("Smit"), ds=ds
-        )
+        )[0]
         assert _PatternPositionMatcher.match(
             {"neg_lookup": "surnames"}, token=token("smit"), ds=ds
-        )
+        )[0]
 
     def test_match_and(self):
         assert _PatternPositionMatcher.match(
             {"and": [{"equal": "Abcd"}, {"like_name": True}]},
             token=token("Abcd"),
             ds=ds,
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"and": [{"equal": "dcef"}, {"like_name": True}]},
             token=token("Abcd"),
             ds=ds,
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"and": [{"equal": "A"}, {"like_name": True}]}, token=token("A"), ds=ds
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"and": [{"equal": "b"}, {"like_name": True}]}, token=token("a"), ds=ds
-        )
+        )[0]
 
     def test_match_or(self):
         assert _PatternPositionMatcher.match(
             {"or": [{"equal": "Abcd"}, {"like_name": True}]}, token=token("Abcd"), ds=ds
-        )
+        )[0]
         assert _PatternPositionMatcher.match(
             {"or": [{"equal": "dcef"}, {"like_name": True}]}, token=token("Abcd"), ds=ds
-        )
+        )[0]
         assert _PatternPositionMatcher.match(
             {"or": [{"equal": "A"}, {"like_name": True}]}, token=token("A"), ds=ds
-        )
+        )[0]
         assert not _PatternPositionMatcher.match(
             {"or": [{"equal": "b"}, {"like_name": True}]}, token=token("a"), ds=ds
-        )
+        )[0]
 
 
 class TestContextAnnotator:

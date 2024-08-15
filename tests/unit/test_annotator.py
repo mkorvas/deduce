@@ -312,7 +312,7 @@ class TestContextAnnotator:
 
         assert annotator._apply_context_pattern(
             pattern_doc,
-            ContextPattern("voornaam",
+            ContextPattern({"voornaam"},
                            "{tag}+naam",
                            SequencePattern(Direction.RIGHT,
                                            set(),
@@ -347,7 +347,7 @@ class TestContextAnnotator:
 
         assert annotator._apply_context_pattern(
             pattern_doc,
-            ContextPattern("achternaam",
+            ContextPattern({"achternaam"},
                            "naam+{tag}",
                            SequencePattern(Direction.LEFT,
                                            set(),
@@ -382,7 +382,7 @@ class TestContextAnnotator:
 
         assert annotator._apply_context_pattern(
             pattern_doc,
-            ContextPattern("achternaam",
+            ContextPattern({"achternaam"},
                            "{tag}+naam",
                            SequencePattern(Direction.RIGHT,
                                            {"-"},

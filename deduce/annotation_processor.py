@@ -182,6 +182,15 @@ class RemoveSingleInitial(FilterAnnotations):
         return True
 
 
+class RemoveAllCapsPersons(FilterAnnotations):
+    """\
+    Removes single-word annotations of persons that contain only capital letter.
+    """
+
+    def should_keep(self, anno: Annotation) -> bool:
+        return anno.tag != 'persoon' or ' ' in anno.text or not anno.text.isupper()
+
+
 class CleanAnnotationTag(dd.process.AnnotationProcessor):
     """Renames tags using a mapping."""
 

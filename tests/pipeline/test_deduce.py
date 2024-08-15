@@ -182,3 +182,10 @@ class TestDeduce:
         deid = model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
 
+    def test_all_caps_multiple_names(self, model):
+        doc = "Betreft: PETER KATZ. mr. Katz bereikt KATZ ADL 2"
+        want = "Betreft: [PERSOON-1]. [PERSOON-2] bereikt KATZ ADL 2"
+
+        deid = model.deidentify(doc)
+        assert deid.deidentified_text == want
+

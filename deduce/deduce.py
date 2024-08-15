@@ -19,6 +19,7 @@ from deduce.annotation_processor import (
     CleanAnnotationTag,
     DeduceMergeAdjacentAnnotations,
     PersonAnnotationConverter,
+    RemoveAllCapsPersons,
     RemoveAnnotations,
     RemoveSingleInitial,
 )
@@ -330,6 +331,11 @@ class _DeduceProcessorLoader:  # pylint: disable=R0903
         post_group.add_processor(
             "remove_single_initial",
             RemoveSingleInitial(),
+        )
+
+        post_group.add_processor(
+            "remove_all_caps_persons",
+            RemoveAllCapsPersons(),
         )
 
         post_group.add_processor(

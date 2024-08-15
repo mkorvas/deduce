@@ -529,6 +529,7 @@
       "annotator_type": "docdeid.process.MultiTokenLookupAnnotator",
       "group": "institutions",
       "args": {
+        "priority": 20,
         "lookup_values": "hospital",
         "overlapping": true,
         "tag": "ziekenhuis"

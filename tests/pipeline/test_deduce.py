@@ -197,3 +197,10 @@ class TestDeduce:
 
         deid = model.deidentify(doc)
         assert deid.deidentified_text == want
+
+    def test_hospital_name(self, model):
+        doc = "therapie Sint Jacob 9/11/2001"
+        want = "therapie [ZIEKENHUIS-1] [DATUM-1]"
+
+        deid = model.deidentify(doc)
+        assert deid.deidentified_text == want

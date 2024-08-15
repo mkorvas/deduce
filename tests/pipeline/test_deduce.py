@@ -140,6 +140,15 @@ class TestDeduce:
         deid = model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
 
+    def test_patient_all_caps(self, model):
+        metadata = {"patient": Person(first_names=["PETER", "ARTJOM"],
+                                      surname="KATER")}
+        doc = "Betreft: Kater Peter Artjom. PETER ARTJOM KATER heeft hoest"
+        want = "Betreft: [PATIENT]. [PATIENT] heeft hoest"
+
+        deid = model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want
+
     def test_single_initial(self, model):
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
         doc = "J-katheter plaatsing. Plaatsen J Ch 3/15 links. MCG, XYZ"
@@ -188,4 +197,3 @@ class TestDeduce:
 
         deid = model.deidentify(doc)
         assert deid.deidentified_text == want
-

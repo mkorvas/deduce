@@ -192,6 +192,27 @@
         ]
       }
     },
+    "patient_firsts": {
+      "annotator_type": "deduce.annotator.ContextAnnotator",
+      "group": "names",
+      "args": {
+        "iterative": true,
+        "pattern": [
+          {
+            "name": "patient_firsts",
+            "pre_tag": [
+              "voornaam_patient"
+            ],
+            "tag": "voornaam_patient+{tag}",
+            "pattern": [
+              {
+                "tagged_mention": "voornaam_patient"
+              }
+            ]
+          }
+        ]
+      }
+    },
     "patient_name_context": {
       "annotator_type": "deduce.annotator.ContextAnnotator",
       "group": "names",
@@ -226,21 +247,6 @@
             "pattern": [
               {
                 "tag": "achternaam_patient"
-              }
-            ]
-          },
-          {
-            "name": "voornaam_left",
-            "direction": "left",
-            "pre_tag": [
-              "voornaam_patient",
-              "achternaam_patient"
-            ],
-            "tag": "voornaam_patient+{tag}",
-            "skip": ["-"],
-            "pattern": [
-              {
-                "tag": "voornaam_patient"
               }
             ]
           },

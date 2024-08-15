@@ -336,10 +336,7 @@ class _DeduceProcessorLoader:  # pylint: disable=R0903
             "patient_cleaner",
             CleanAnnotationTag(
                 tag_map={
-                    "voornaam_patient": "patient",
-                    "initiaal_patient": "patient",
                     "achternaam_patient": "patient",
-                    "part_of_patient": "persoon",
                     # TODO We should probably merge this new "person"
                     #  annotation with neighbouring annotations in yet another
                     #  postprocessing step.

@@ -170,10 +170,11 @@ class TestPersonAnnotationConverter:
 
         expected_annotations = dd.AnnotationSet(
             [
-                dd.Annotation(
-                    text="Jan", start_char=0, end_char=3, tag="voornaam_patient"
-                ),
-                dd.Annotation(text=" Jansen", start_char=3, end_char=10, tag="persoon"),
+                # Patients are rarely referred just by their first name. If a mention
+                # does not include the patient's surname, it's not to be considered a
+                # PATIENT mention and should be upcast to a PERSON.
+                dd.Annotation(text="Jan Jansen", start_char=0, end_char=10,
+                              tag="persoon"),
             ]
         )
 

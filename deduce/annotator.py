@@ -32,8 +32,17 @@ class ContextPattern:
     Pattern for matching a sequence of tokens anchored on a certain starting tag.
     """
     pre_tag: Optional[set[str]]
+    """
+    Set of base tags, one of which must appear at the edge of the initial mention 
+    close to the context subject to pattern matching, that is, at the right edge if 
+    the matching direction is to the right, or the left edge otherwise. The base tag 
+    refers to substrings of the full mention tag upon splitting it on the plus (+) 
+    symbol.
+    """
     tag: str
+    """Output tag, or a template for it."""
     seq_pattern: SequencePattern
+    """Pattern for the sequence of tokens in the context."""
 
 
 class ContextAnnotator(Annotator):
@@ -87,7 +96,7 @@ class ContextAnnotator(Annotator):
         annotation: Annotation,
         context_pattern: ContextPattern,
         doc: Document,
-        annos_by_token: defaultdict[str, Iterable[Annotation]],
+        annos_by_token: defaultdict[Token, Iterable[Annotation]],
     ) -> Annotation:
 
         dir_ = context_pattern.seq_pattern.direction
@@ -128,7 +137,7 @@ class ContextAnnotator(Annotator):
             start_token=left_ann.start_token,
             end_token=right_ann.end_token,
             tag=context_pattern.tag.format(tag=annotation.tag),
-            priority=annotation.priority,
+            priority=max(self.priority, annotation.priority),
         )
 
     def _get_annotations(
@@ -160,8 +169,12 @@ class ContextAnnotator(Annotator):
         if self.iterative and (new := dd.AnnotationSet(annotations - orig_annos)):
             # XXX Are we sure that other annotations than `new` don't matter anymore
             #  to the operation of the `_get_annotations` method?
+            # annotations = dd.AnnotationSet(
+            #     (annotations - new) | self._get_annotations(doc, new)
+            # )
             annotations = dd.AnnotationSet(
-                (annotations - new) | self._get_annotations(doc, new)
+                (annotations - new) |
+                self._get_annotations(doc, dd.AnnotationSet(annotations | new))
             )
 
         return annotations

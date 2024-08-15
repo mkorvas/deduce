@@ -1,5 +1,5 @@
 {
-  "adjacent_annotations_slack": "[\\. \\-]?[\\. ]?",
+  "adjacent_annotations_slack": "[ \\-]?[ ]?",
   "resolve_overlap_strategy": {
     "attributes": [
       "priority",
@@ -171,38 +171,105 @@
         "tag": "_"
       }
     },
-    "name_context": {
+    "patient_initials": {
       "annotator_type": "deduce.annotator.ContextAnnotator",
       "group": "names",
       "args": {
         "iterative": true,
         "pattern": [
           {
-            "name": "patient_left",
-            "direction": "left",
+            "name": "patient_initials",
             "pre_tag": [
-              "achternaam_patient"
+              "initiaal_patient"
             ],
-            "tag": "voornaam_patient+achternaam_patient",
+            "tag": "initiaal_patient+{tag}",
             "pattern": [
               {
-                "tag": "vornaam_patient"
+                "tagged_mention": "initiaal_patient"
               }
             ]
-          },
+          }
+        ]
+      }
+    },
+    "patient_name_context": {
+      "annotator_type": "deduce.annotator.ContextAnnotator",
+      "group": "names",
+      "args": {
+        "iterative": true,
+        "pattern": [
           {
-            "name": "patient_right",
+            "name": "achternaam_right",
             "direction": "right",
             "pre_tag": [
-              "voornaam_patient"
+              "initiaal_patient",
+              "voornaam_patient",
+              "achternaam_patient"
             ],
-            "tag": "voornaam_patient+achternaam_patient",
+            "tag": "{tag}+achternaam_patient",
             "pattern": [
               {
                 "tag": "achternaam_patient"
               }
             ]
           },
+          {
+            "name": "achternaam_left",
+            "direction": "left",
+            "pre_tag": [
+              "initiaal_patient",
+              "voornaam_patient",
+              "achternaam_patient"
+            ],
+            "tag": "achternaam_patient+{tag}",
+            "skip": [",", "-"],
+            "pattern": [
+              {
+                "tag": "achternaam_patient"
+              }
+            ]
+          },
+          {
+            "name": "voornaam_left",
+            "direction": "left",
+            "pre_tag": [
+              "voornaam_patient",
+              "achternaam_patient"
+            ],
+            "tag": "voornaam_patient+{tag}",
+            "skip": ["-"],
+            "pattern": [
+              {
+                "tag": "voornaam_patient"
+              }
+            ]
+          },
+          {
+            "name": "prefix_left",
+            "direction": "left",
+            "pre_tag": [
+              "prefix_patient",
+              "initiaal_patient",
+              "voornaam_patient",
+              "achternaam_patient"
+            ],
+            "tag": "prefix_patient+{tag}",
+            "skip": ["."],
+            "pattern": [
+              {
+                "lookup": "prefix"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "name_context": {
+      "annotator_type": "deduce.annotator.ContextAnnotator",
+      "group": "names",
+      "args": {
+        "iterative": true,
+        "pattern": [
           {
             "name": "interfix_right",
             "direction": "right",

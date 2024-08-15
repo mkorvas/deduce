@@ -12,10 +12,7 @@ class DeduceMergeAdjacentAnnotations(dd.process.MergeAdjacentAnnotations):
 
     - adjacent annotations with mixed patient/person tags are replaced
       with the "persoon" annotation;
-    - adjacent annotations with patient tags of which one is the surname
-      are replaced with the "patient" annotation; and
-    - adjacent annotations with other patient tags are replaced with
-      the "part_of_patient" annotation.
+    - adjacent annotations with patient tags are replaced with the "patient" annotation.
     """
 
     def _tags_match(self, left_tag: str, right_tag: str) -> bool:
@@ -32,12 +29,12 @@ class DeduceMergeAdjacentAnnotations(dd.process.MergeAdjacentAnnotations):
         """
 
         patient_part = [tag.endswith("_patient") for tag in (left_tag, right_tag)]
-        # FIXME Ideally, we should be first looking for a `*_patient` tag in
-        #  both directions and only failing that, merge with an adjacent
-        #  "persoon" tag.
         return (
             left_tag == right_tag
             or all(patient_part)
+            # XXX Why only this way, why not enable also "persoon" as the left tag
+            #  and patient_part as the right one? Note that this would affect also
+            #  the implementation of the next method.
             or (patient_part[0] and right_tag == "persoon")
         )
 
@@ -58,13 +55,9 @@ class DeduceMergeAdjacentAnnotations(dd.process.MergeAdjacentAnnotations):
         ltag = left_annotation.tag
         rtag = right_annotation.tag
         replacement_tag = (
-            ltag
-            if ltag == rtag
-            else "persoon"
-            if rtag == "persoon"
-            else "patient"
-            if any(tag.startswith("achternaam") for tag in (ltag, rtag))
-            else "part_of_patient"
+            ltag if ltag == rtag else
+            "persoon" if rtag == "persoon" else
+            "patient"
         )
 
         return dd.Annotation(
@@ -100,7 +93,8 @@ class PersonAnnotationConverter(dd.process.AnnotationProcessor):
             """
             is_pseudo = "pseudo" in tag
             num_subtags = tag.count("+") + 1
-            is_patient = tag.count("patient") == num_subtags
+            is_patient = (tag.count("patient") == num_subtags and
+                          'achternaam_patient' in tag)
             return (-int(is_pseudo), -num_subtags, -int(is_patient))
 
         self._overlap_resolver = dd.process.OverlapResolver(

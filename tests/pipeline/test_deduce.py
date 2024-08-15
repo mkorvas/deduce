@@ -165,3 +165,20 @@ class TestDeduce:
         want_upper1 = doc_upper1
         deid3 = model.deidentify(doc_upper1, metadata=metadata)
         assert deid3.deidentified_text == want_upper1
+
+    def test_street_pattern_1(self, model):
+        doc = "Evelien Terlien, woonachtig Veentien 15, 3017 IN Holtien, aangezien."
+        want = "[PERSOON-1], woonachtig [LOCATIE-1], [LOCATIE-2], aangezien."
+
+        deid = model.deidentify(doc)
+        assert deid.deidentified_text == want
+
+    def test_all_caps_names(self, model):
+        metadata = {"patient": Person(first_names=["Peter", "Artjom"],
+                                      surname="Kater")}
+        doc = "Betreft: PETER ARTJOM KATER. mr. P.A. Kater bereikt KATZ ADL 2"
+        want = "Betreft: [PATIENT]. [PATIENT] bereikt KATZ ADL 2"
+
+        deid = model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want
+

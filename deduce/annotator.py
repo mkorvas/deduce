@@ -361,7 +361,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
         self_fn_matcher = partial(DynamicNameAnnotator._match_first_name,
                                   max_tolerance=self.tolerance)
         for meta_def in meta_defs:
-            for name in getattr(meta_def, 'first_names', ()):
+            for name in (getattr(meta_def, 'first_names', None) or ()):
                 yield (self_fn_matcher,
                        name,
                        f'voornaam_{self.meta_key}')

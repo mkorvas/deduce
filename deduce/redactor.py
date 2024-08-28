@@ -12,7 +12,7 @@ import docdeid as dd
 from docdeid.process import SimpleRedactor
 
 
-_DATE_SPLITTER_RX = re.compile('[-/\\. ]+')
+_DATE_SPLITTER_RX = re.compile('[-/. ]+')
 _DIGITS = re.compile('[0-9]+')
 _MONTHS_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun',
                  'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
@@ -109,11 +109,13 @@ class DateStrategy:
                     # When specified, make sure to use init_shift, not a random number.
                     self._random = Random(424242 - self.init_shift)  # whatever
                     self._shift = self.init_shift
+                    logging.debug("Updated date shift amount to %d.", self._shift)
                     return
             # Compute a random shift amount.
             rand_shift = self._random.randint(-61, 60)
             # Avoid the zero shift.
             self._shift = rand_shift + 1 if rand_shift >= 0 else rand_shift
+            logging.debug("Updated date shift amount to %d.", self._shift)
 
     def redact(self, anno: dd.Annotation) -> str:
         if self.strategy != "shift":

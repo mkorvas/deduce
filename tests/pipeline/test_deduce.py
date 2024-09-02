@@ -30,9 +30,28 @@ def model(shared_datadir):
     )
 
 
+@pytest.fixture
+def strict_model(shared_datadir):
+    return Deduce(
+        save_lookup_structs=False,
+        build_lookup_structs=True,
+        lookup_data_path=shared_datadir / "lookup",
+        config={
+            'annotators': {
+                'patient_name': {
+                    'args': {
+                        'tolerance': 0
+                    }
+                }
+            }
+        }
+    )
+
+
 class TestDeduce:
     def test_annotate(self, model):
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
+
         doc = model.deidentify(text, metadata=metadata)
 
         expected_annotations = {
@@ -147,6 +166,26 @@ class TestDeduce:
         want = "Betreft: [PATIENT]. [PATIENT] heeft hoest"
 
         deid = model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want
+
+    def test_patient_accents(self, strict_model):
+        metadata = {"patient": Person(first_names=["FRANCOIS",
+                                                   "ŠTĚPANIČ",
+                                                   "CHLOÉ"],
+                                      surname="CROSS")}
+        # This works, too, but I found no good way to configure
+        # the context annotator to handle a combination of first
+        # names and initials, to test both cases at once.
+        # doc = "Betreft: François Chloe Cross."
+        doc = "Betreft: S. Cross."
+        want = "Betreft: [PATIENT]."
+        deid = strict_model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want
+
+        # OK, let's just add a second case to the test method.
+        doc = "Betreft: François Chloe Cross."
+        want = "Betreft: [PATIENT]."
+        deid = strict_model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
 
     def test_single_initial(self, model):

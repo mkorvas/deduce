@@ -182,7 +182,7 @@
             "pre_tag": [
               "initiaal_patient"
             ],
-            "tag": "initiaal_patient+{tag}",
+            "tag": "{tag}+initiaal_patient",
             "pattern": [
               {
                 "tagged_mention": "initiaal_patient"
@@ -203,7 +203,7 @@
             "pre_tag": [
               "voornaam_patient"
             ],
-            "tag": "voornaam_patient+{tag}",
+            "tag": "{tag}+voornaam_patient",
             "pattern": [
               {
                 "tagged_mention": "voornaam_patient"

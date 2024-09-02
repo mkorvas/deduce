@@ -123,7 +123,9 @@ def load_surname_lookup(
 ) -> dd.ds.LookupTrie:
     """Load surname LookupTrie."""
 
-    surname = dd.ds.LookupSet()
+    surname = dd.ds.LookupSet(
+        matching_pipeline=[dd.str.LowercaseTail()]
+    )
 
     surname.add_items_from_iterable(
         raw_itemsets["surname"],

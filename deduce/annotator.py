@@ -21,6 +21,7 @@ from docdeid.process.annotator import (
     SequenceAnnotator,
     SequencePattern,
 )
+from docdeid.str import ReplaceNonAsciiCharacters
 from docdeid.tokenizer import TokenList
 
 warnings.simplefilter(action="default")
@@ -209,6 +210,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
     """
 
     _skip = [".", "-", " "]
+    _asciifier = ReplaceNonAsciiCharacters()
 
     def __init__(self,
                  meta_key: str,
@@ -231,8 +233,10 @@ class DynamicNameAnnotator(dd.process.Annotator):
             max_tolerance: int = 1,
     ) -> Optional[tuple[Token, Token]]:
 
-        tolerance = max_tolerance if len(token.text) > 3 else 0
-        if str_match(token.text, name, max_edit_distance=tolerance):
+        have_norm = cls._asciifier.process(token.text)
+        want_norm = cls._asciifier.process(name)
+        tolerance = max_tolerance if len(have_norm) > 3 else 0
+        if str_match(have_norm, want_norm, max_edit_distance=tolerance):
             return token, token
         else:
             return None
@@ -244,11 +248,13 @@ class DynamicNameAnnotator(dd.process.Annotator):
             name: str,
     ) -> Optional[tuple[Token, Token]]:
 
-        if not str_match(token.text, name[0]):
+        have_norm = cls._asciifier.process(token.text)
+        want_norm = cls._asciifier.process(name)
+        if not str_match(have_norm, want_norm[0]):
             return None
 
         next_token = token.next()
-        if (next_token is not None) and str_match(next_token.text, "."):
+        if (next_token is not None) and next_token.text == ".":
             return token, next_token
         else:
             return token, token
@@ -260,7 +266,9 @@ class DynamicNameAnnotator(dd.process.Annotator):
             name: str,
     ) -> Optional[tuple[Token, Token]]:
 
-        if str_match(token.text, name):
+        have_norm = cls._asciifier.process(token.text)
+        want_norm = cls._asciifier.process(name)
+        if str_match(have_norm, want_norm):
             return token, token
 
         return None
@@ -277,7 +285,9 @@ class DynamicNameAnnotator(dd.process.Annotator):
         start_token = token
 
         while True:
-            if not str_match(surname_token.text, token.text,
+            have_norm = cls._asciifier.process(surname_token.text)
+            want_norm = cls._asciifier.process(token.text)
+            if not str_match(have_norm, want_norm,
                              max_edit_distance=max_tolerance):
                 return None
 

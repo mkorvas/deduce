@@ -243,3 +243,12 @@ class TestDeduce:
 
         deid = model.deidentify(doc)
         assert deid.deidentified_text == want
+
+    def test_hospital_ambig(self, model):
+        metadata = {"patient": Person(first_names=["Jan"],
+                                      surname="Jacob")}
+        doc = "uw pt Jacob werd overgebracht naar st Jacob"
+        want = "uw pt [PATIENT] werd overgebracht naar [ZIEKENHUIS-1]"
+
+        deid = model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want

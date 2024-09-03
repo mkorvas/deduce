@@ -123,6 +123,7 @@ class PersonAnnotationConverter(dd.process.AnnotationProcessor):
                 start_char=anno.start_char,
                 end_char=anno.end_char,
                 tag=PersonAnnotationConverter._resolve_tag(anno.tag),
+                priority=anno.priority,
             )
             for anno in real_annos
         )

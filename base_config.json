@@ -168,6 +168,7 @@
       "annotator_type": "deduce.annotator.PatientNameAnnotator",
       "group": "names",
       "args": {
+        "priority": 20,
         "tag": "_"
       }
     },
@@ -632,7 +633,8 @@
       "args": {
         "regexp_pattern": "(([-a-zA-Z0-9:%._\\+~#=]{1,256})@([-a-zA-Z0-9:%._\\+~#=]{1,256})(\\.)(com|net|org|co|us|uk|nl|be|fr|sp|gov|nu))",
         "tag": "emailadres",
-        "pre_match_words": ["com", "net", "org", "co", "us", "uk", "nl", "be", "fr", "sp", "gov", "nu"]
+        "pre_match_words": ["com", "net", "org", "co", "us", "uk", "nl", "be", "fr", "sp", "gov", "nu"],
+        "priority": 20
       }
     },
     "url": {
@@ -641,7 +643,8 @@
       "args": {
         "regexp_pattern": "((https?:\\/\\/(?:www\\.)?)?([-a-zA-Z0-9:%._\\+~#=]{1,256})(\\.)(com|net|org|co|us|uk|nl|be|fr|sp|gov|nu)(\\b)([():%_\\+.~,]*[-a-zA-Z-0-9#?&/=]+)*)",
         "tag": "url",
-        "pre_match_words": ["com", "net", "org", "co", "us", "uk", "nl", "be", "fr", "sp", "gov", "nu"]
+        "pre_match_words": ["com", "net", "org", "co", "us", "uk", "nl", "be", "fr", "sp", "gov", "nu"],
+        "priority": 20
       }
     }
   }

@@ -1,11 +1,12 @@
-[![tests](https://github.com/vmenger/deduce/actions/workflows/test.yml/badge.svg)](https://github.com/vmenger/deduce/actions/workflows/test.yml)
-[![build](https://github.com/vmenger/deduce/actions/workflows/build.yml/badge.svg)](https://github.com/vmenger/deduce/actions/workflows/build.yml)
-[![documentation](https://readthedocs.org/projects/deduce/badge/?version=latest)](https://deduce.readthedocs.io/en/latest/?badge=latest)
-![pypi version](https://img.shields.io/pypi/v/deduce)
-![pypi python versions](https://img.shields.io/pypi/pyversions/deduce)
-![pypi downloads](https://img.shields.io/pypi/dm/deduce)
-![license](https://img.shields.io/github/license/vmenger/deduce)
-[![black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+<!-- TODO? Adapt some of these badges to the fork, where possible and desirable. -->
+<!-- [![tests](https://github.com/vmenger/deduce/actions/workflows/test.yml/badge.svg)](https://github.com/vmenger/deduce/actions/workflows/test.yml) -->
+<!-- [![build](https://github.com/vmenger/deduce/actions/workflows/build.yml/badge.svg)](https://github.com/vmenger/deduce/actions/workflows/build.yml) -->
+<!-- [![documentation](https://readthedocs.org/projects/deduce/badge/?version=latest)](https://deduce.readthedocs.io/en/latest/?badge=latest) -->
+<!-- ![pypi version](https://img.shields.io/pypi/v/deduce) -->
+<!-- ![pypi python versions](https://img.shields.io/pypi/pyversions/deduce) -->
+<!-- ![pypi downloads](https://img.shields.io/pypi/dm/deduce) -->
+<!-- ![license](https://img.shields.io/github/license/vmenger/deduce) -->
+<!-- [![black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) -->
 
 # About this fork
 

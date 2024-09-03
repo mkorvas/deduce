@@ -16,6 +16,19 @@ available here has some extra or different functionality on top of the
 original tool -- which is maybe obvious but the license requires me to 
 state it clearly.
 
+Changes made to the upstream implementation include:
+* Increased coverage for some annotators -- detecting streets and names
+  also when written in all caps.
+* Improved logic for detecting the patient's names (v. other persons' names
+  v. hospital names).
+* Ability to detect also other custom person names (e.g. when names of
+  doctors involved are known).
+* A redactor that shifts dates by a random amount instead of replacing them
+  with a placeholder.
+* Added end-to-end tests.
+* Extended and improved loggging.
+* Improved compliance with linters.
+
 Use at your own risk.
 
 Original Readme documentation follows.

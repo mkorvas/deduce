@@ -198,6 +198,10 @@ def cache_lookup_structs(
         "lookup_structs": lookup_structs,
     }
 
+    # Ensure the parent dir ("cache") exists.
+    if not cache_file.parent.exists():
+        os.makedirs(cache_file.parent)
+
     with open(cache_file, "wb") as file:
         pickle.dump(cache, file)
 

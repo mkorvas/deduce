@@ -236,9 +236,9 @@ class TestDeduce:
         with_doctor = dict(metadata,
                            doctors=[Person(first_names=["Lisa"],
                                            surname="Mona")])
-        # Note the "μL" token -- currently, it confuses the pipeline so it considers
-        # it an initial of a person, which gets eventually converted to the "PERSOON"
-        # tag.
+        # Note the "μL" token -- previously, it would confuse the pipeline so it
+        # would consider it an initial of a person, which would get eventually
+        # converted to the "PERSOON" tag.
         doc_upper3 = "Patient heet r.ň.Ỗ. Type ECG: L 2000 m/μL."
         want_upper3 = doc_upper3
         deid3 = model_with_doctors.deidentify(doc_upper3, metadata=with_doctor)

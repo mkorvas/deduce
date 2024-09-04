@@ -4,7 +4,7 @@ import docdeid as dd
 from docdeid import Tokenizer
 
 from deduce.str import FilterBasedOnLookupSet, TitleCase, UpperCase, UpperCaseFirstChar
-from deduce.utils import lookup_set_to_trie
+from docdeid.utils import lookup_set_to_trie
 
 
 def load_common_word_lookup(raw_itemsets: dict[str, set[str]]) -> dd.ds.LookupSet:

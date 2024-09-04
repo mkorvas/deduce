@@ -21,7 +21,7 @@ from docdeid.process.annotator import (
     SequenceAnnotator,
     SequencePattern,
 )
-from docdeid.str import ReplaceNonAsciiCharacters, LowercaseTail
+from docdeid.str.utils import replace_nonascii, lowercase_tail
 from docdeid.tokenizer import TokenList
 
 warnings.simplefilter(action="default")
@@ -210,8 +210,6 @@ class DynamicNameAnnotator(dd.process.Annotator):
     """
 
     _skip = [".", "-", " "]
-    _asciifier = ReplaceNonAsciiCharacters()
-    _lowercaser = LowercaseTail()
 
     def __init__(self,
                  meta_key: str,
@@ -228,7 +226,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
 
     @classmethod
     def _normalize(cls, phrase: str):
-        return cls._asciifier.process(cls._lowercaser.process(phrase))
+        return replace_nonascii(lowercase_tail(phrase))
 
     @classmethod
     def _match_first_name(

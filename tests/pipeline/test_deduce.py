@@ -1,6 +1,7 @@
-import docdeid as dd
+import logging
 import pytest
 
+import docdeid as dd
 from deduce import Deduce
 from deduce.person import Person
 
@@ -43,6 +44,28 @@ def strict_model(shared_datadir):
                         'tolerance': 0
                     }
                 }
+            }
+        }
+    )
+
+
+@pytest.fixture
+def model_with_doctors(shared_datadir):
+    return Deduce(
+        save_lookup_structs=False,
+        build_lookup_structs=True,
+        lookup_data_path=shared_datadir / "lookup",
+        config={
+            "annotators": {
+                "doctor_names": {
+                    "annotator_type": "deduce.annotator.DynamicNameAnnotator",
+                    "group": "names",
+                    "args": {
+                        "meta_key": "doctors",
+                        "tag": "_",
+                        "tolerance": 0
+                    }
+                },
             }
         }
     )
@@ -196,7 +219,7 @@ class TestDeduce:
         deid = model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
 
-    def test_single_initial_unicode(self, model):
+    def test_single_initial_unicode(self, model, model_with_doctors):
         metadata = {"patient": Person(first_names=["Raf", "Ňaf", "Ỗlaf"])}
         doc = "Patient heet R.Ň.Ỗ. Type ECG: Ň 2000 m/R."
         want = "Patient heet [PATIENT] Type ECG: Ň 2000 m/R."
@@ -209,10 +232,17 @@ class TestDeduce:
         deid2 = model.deidentify(doc_upper2, metadata=metadata)
         assert deid2.deidentified_text == want_upper2
 
-        doc_upper1 = "Patient heet r.ň.Ỗ. Type ECG: Ň 2000 m/R."
-        want_upper1 = doc_upper1
-        deid3 = model.deidentify(doc_upper1, metadata=metadata)
-        assert deid3.deidentified_text == want_upper1
+        logging.getLogger().setLevel(logging.DEBUG)
+        with_doctor = dict(metadata,
+                           doctors=[Person(first_names=["Lisa"],
+                                           surname="Mona")])
+        # Note the "μL" token -- currently, it confuses the pipeline so it considers
+        # it an initial of a person, which gets eventually converted to the "PERSOON"
+        # tag.
+        doc_upper3 = "Patient heet r.ň.Ỗ. Type ECG: L 2000 m/μL."
+        want_upper3 = doc_upper3
+        deid3 = model_with_doctors.deidentify(doc_upper3, metadata=with_doctor)
+        assert deid3.deidentified_text == want_upper3
 
     def test_street_pattern_1(self, model):
         doc = "Evelien Terlien, woonachtig Veentien 15, 3017 IN Holtien, aangezien."

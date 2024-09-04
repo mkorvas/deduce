@@ -21,7 +21,7 @@ from docdeid.process.annotator import (
     SequenceAnnotator,
     SequencePattern,
 )
-from docdeid.str import ReplaceNonAsciiCharacters
+from docdeid.str import ReplaceNonAsciiCharacters, LowercaseTail
 from docdeid.tokenizer import TokenList
 
 warnings.simplefilter(action="default")
@@ -211,6 +211,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
 
     _skip = [".", "-", " "]
     _asciifier = ReplaceNonAsciiCharacters()
+    _lowercaser = LowercaseTail()
 
     def __init__(self,
                  meta_key: str,
@@ -226,6 +227,10 @@ class DynamicNameAnnotator(dd.process.Annotator):
         super().__init__(*args, **kwargs)
 
     @classmethod
+    def _normalize(cls, phrase: str):
+        return cls._asciifier.process(cls._lowercaser.process(phrase))
+
+    @classmethod
     def _match_first_name(
             cls,
             token: Token,
@@ -233,8 +238,8 @@ class DynamicNameAnnotator(dd.process.Annotator):
             max_tolerance: int = 1,
     ) -> Optional[tuple[Token, Token]]:
 
-        have_norm = cls._asciifier.process(token.text)
-        want_norm = cls._asciifier.process(name)
+        have_norm = cls._normalize(token.text)
+        want_norm = cls._normalize(name)
         tolerance = max_tolerance if len(have_norm) > 3 else 0
         if str_match(have_norm, want_norm, max_edit_distance=tolerance):
             return token, token
@@ -248,8 +253,8 @@ class DynamicNameAnnotator(dd.process.Annotator):
             name: str,
     ) -> Optional[tuple[Token, Token]]:
 
-        have_norm = cls._asciifier.process(token.text)
-        want_norm = cls._asciifier.process(name)
+        have_norm = cls._normalize(token.text)
+        want_norm = cls._normalize(name)
         if not str_match(have_norm, want_norm[0]):
             return None
 
@@ -266,8 +271,8 @@ class DynamicNameAnnotator(dd.process.Annotator):
             name: str,
     ) -> Optional[tuple[Token, Token]]:
 
-        have_norm = cls._asciifier.process(token.text)
-        want_norm = cls._asciifier.process(name)
+        have_norm = cls._normalize(token.text)
+        want_norm = cls._normalize(name)
         if str_match(have_norm, want_norm):
             return token, token
 
@@ -285,8 +290,8 @@ class DynamicNameAnnotator(dd.process.Annotator):
         start_token = token
 
         while True:
-            have_norm = cls._asciifier.process(surname_token.text)
-            want_norm = cls._asciifier.process(token.text)
+            have_norm = cls._normalize(surname_token.text)
+            want_norm = cls._normalize(token.text)
             if not str_match(have_norm, want_norm,
                              max_edit_distance=max_tolerance):
                 return None

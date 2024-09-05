@@ -326,3 +326,13 @@ class TestDeduce:
 
         deid = model_birth_date.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
+
+    def test_unrecognized_patient(self, model):
+        metadata = {"patient": Person(first_names=["Jan", "Jacob"],
+                                      surname="Zeppelin")}
+        doc = ("Deze patiënt(e)\n\nZeppelin Jan Jacob\n\nNiet in staat is van te "
+               "werken.")
+        want = ("Deze patiënt(e)\n\n[PATIENT]\n\nNiet in staat is van te werken.")
+
+        deid = model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want

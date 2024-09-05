@@ -1,4 +1,3 @@
-import logging
 import pytest
 
 import docdeid as dd
@@ -232,7 +231,6 @@ class TestDeduce:
         deid2 = model.deidentify(doc_upper2, metadata=metadata)
         assert deid2.deidentified_text == want_upper2
 
-        logging.getLogger().setLevel(logging.DEBUG)
         with_doctor = dict(metadata,
                            doctors=[Person(first_names=["Lisa"],
                                            surname="Mona")])

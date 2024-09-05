@@ -215,6 +215,8 @@ class DeduceRedactor(SimpleRedactor):
                              for anno in sorted_annos)
                 continue
 
+            match_tolerance = 0 if tag == "datum" else 1
+
             same_tag_repls: dict[dd.Annotation, str] = {}
             for anno in sorted_annos:
                 # Look for existing similar mentions with this tag.
@@ -223,7 +225,7 @@ class DeduceRedactor(SimpleRedactor):
                         DamerauLevenshtein.distance(
                             anno.text, same_tag_anno.text, score_cutoff=1
                         )
-                        <= 1
+                        <= match_tolerance
                     ):
                         same_tag_repls[anno] = repl
                         break

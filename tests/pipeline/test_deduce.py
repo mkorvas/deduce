@@ -280,3 +280,10 @@ class TestDeduce:
 
         deid = model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
+
+    def test_adjacent_dates(self, model):
+        doc = "opname 8/11/2001 10:05:00; therapie 9/11/2001-7/12/2001"
+        want = "opname [DATUM-1] 10:05:00; therapie [DATUM-2]-[DATUM-3]"
+
+        deid = model.deidentify(doc)
+        assert deid.deidentified_text == want

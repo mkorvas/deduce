@@ -348,10 +348,12 @@ class _DeduceProcessorLoader:  # pylint: disable=R0903
             ),
         )
 
-        date_strategy = (
-            DateStrategy("shift", config.get("redactor_date_strategy_init_shift"))
-            if config.get("redactor_date_strategy") == "shift"
-            else None)
+        if config.get("redactor_date_strategy") == "shift":
+            init_shift = config.get("redactor_date_strategy_init_shift")
+            incl_key = config.get("redactor_date_strategy_include_key")
+            date_strategy = DateStrategy("shift", init_shift, incl_key)
+        else:
+            date_strategy = None
         post_group.add_processor(
             "redactor",
             DeduceRedactor(

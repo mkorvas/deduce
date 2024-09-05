@@ -90,12 +90,18 @@ class DateStrategy:
     #   would perhaps be more appropriate, but also too heavy for what it's worth.
     strategy: str
     init_shift: Optional[int]
+    include_key: Optional[str]
     _random: Optional[Random] = field(init=False, repr=False, default=None)
     _shift: int = field(init=False, repr=False, default=0)
+    _include_val: Optional[date] = field(init=False, repr=False, default=None)
     _last_stay_id: Optional[str] = field(init=False, repr=False, default=None)
 
     def on_document(self, metadata: Optional[dd.MetaData]):
         if self.strategy == "shift":
+            # Store the only date to process, if applicable.
+            if self.include_key is not None:
+                self._include_val = (None if metadata is None else
+                                     metadata[self.include_key])
             # Keep the same shift if still processing the same stay.
             stay_id = None if metadata is None else metadata['stay_id']
             if stay_id is not None and stay_id == self._last_stay_id:
@@ -161,9 +167,15 @@ class DateStrategy:
                         anno.text)
                 return anno.text
 
+        orig = date(y_parse[0], m_parse[0], d_parse[0])
+
+        # Limit operation to the date to include, if specified.
+        if self.include_key is not None and self._include_val != orig:
+            return anno.text
+
         # Shift.
         try:
-            shifted = date(y_parse[0], m_parse[0], d_parse[0]) + timedelta(days=self._shift)
+            shifted = orig + timedelta(days=self._shift)
         except ValueError as e:
             logging.error('Failed to parse "%s" as a valid date: %s',
                           anno.text, e)
@@ -194,7 +206,7 @@ class DeduceRedactor(SimpleRedactor):
                  date_strategy: Optional[DateStrategy] = None,
                  **kwargs):
         super().__init__(**kwargs)
-        self.date_strategy = date_strategy or DateStrategy("hide", 0)
+        self.date_strategy = date_strategy or DateStrategy("hide", 0, None)
 
     def redact(self,
                text: str,

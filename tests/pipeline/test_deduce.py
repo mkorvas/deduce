@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 
 import docdeid as dd
@@ -68,6 +70,24 @@ def model_with_doctors(shared_datadir):
             }
         }
     )
+
+
+@pytest.fixture
+def model_birth_date(shared_datadir):
+    return Deduce(
+        save_lookup_structs=False,
+        build_lookup_structs=True,
+        lookup_data_path=shared_datadir / "lookup",
+        config={
+            'redactor_date_strategy': 'shift',
+            'redactor_date_strategy_init_shift': 1,
+            'redactor_date_strategy_include_key': 'birth_date',
+        }
+    )
+
+
+# import pydevd_pycharm
+# pydevd_pycharm.settrace()
 
 
 class TestDeduce:
@@ -286,4 +306,23 @@ class TestDeduce:
         want = "opname [DATUM-1] 10:05:00; therapie [DATUM-2]-[DATUM-3]"
 
         deid = model.deidentify(doc)
+        assert deid.deidentified_text == want
+
+    def test_birth_date_shifting(self, model_birth_date):
+        metadata = {"patient": Person(first_names=["Jan"],
+                                      surname="Jacob"),
+                    "birth_date": date(year=2022, month=2, day=24)}
+        # Yes, the last date present in the text does not play the role of a birth
+        # date, but that's not a bug because
+        #   1. this program does basically only keyword matching, it doesn't
+        #      interpret the context to know this mention does not express the birth
+        #      date;
+        #   2. the "birth_date" meta key is not interpreted, either, it could as well
+        #      be "special_operation_day" and the behaviour should stay the same.
+        doc = ("patient Jan Jacob °24/02/2022, opname 25/02/2022 o.w.v. letsels van "
+               "2022-02-24")
+        want = ("patient [PATIENT] °25/02/2022, opname 25/02/2022 o.w.v. letsels van "
+                "2022-02-25")
+
+        deid = model_birth_date.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want

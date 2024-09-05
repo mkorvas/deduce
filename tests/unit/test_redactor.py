@@ -81,7 +81,7 @@ class TestDeduceRedactor:
         assert proc.redact(text, annotations) == expected_text
 
     def test_shift_date(self):
-        proc = DeduceRedactor(date_strategy=DateStrategy("shift", 7))
+        proc = DeduceRedactor(date_strategy=DateStrategy("shift", 7, None))
         text = "2024-07-29 t/m 28. dec 24"
 
         annotations = dd.AnnotationSet(

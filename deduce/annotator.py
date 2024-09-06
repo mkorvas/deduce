@@ -226,7 +226,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
 
     @classmethod
     def _normalize(cls, phrase: str):
-        return drop_accents(lowercase_tail(phrase))
+        return drop_accents(lowercase_tail(phrase, keep_mixed=False))
 
     @classmethod
     def _match_first_name(

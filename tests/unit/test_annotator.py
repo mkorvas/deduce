@@ -750,7 +750,7 @@ class TestPatientNameAnnotator:
 
         with patch.object(doc, "get_tokens", return_value=tokens):
             with patch.object(
-                tokenizer, "tokenize", return_value=linked_tokens(["Jansen"])
+                    tokenizer, "tokenize", return_value=linked_tokens(["Jansen"])
             ):
                 annotations = ann.annotate(doc)
 
@@ -761,6 +761,41 @@ class TestPatientNameAnnotator:
                 end_char=22,
                 tag="achternaam_patient",
             )
+        ]
+
+    def test_normalization(self, tokenizer):
+        metadata = {
+            "patient": Person(
+                first_names=["RENÉ", "JAKOB"], surname="VAN JANSEN"
+            )
+        }
+        text = "De patient heet VAN JANSEN RENé JAKOB"
+        doc = dd.Document(text=text,
+                          tokenizers={'default': tokenizer},
+                          metadata=metadata)
+
+        ann = PatientNameAnnotator(tokenizer=tokenizer, tag="_")
+        annotations = ann.annotate(doc)
+
+        assert annotations == [
+            dd.Annotation(
+                text="VAN JANSEN",
+                start_char=16,
+                end_char=26,
+                tag="achternaam_patient",
+            ),
+            dd.Annotation(
+                text="RENé",
+                start_char=27,
+                end_char=31,
+                tag="voornaam_patient",
+            ),
+            dd.Annotation(
+                text="JAKOB",
+                start_char=32,
+                end_char=37,
+                tag="voornaam_patient",
+            ),
         ]
 
 

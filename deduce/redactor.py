@@ -167,19 +167,19 @@ class DateStrategy:
                         anno.text)
                 return anno.text
 
-        orig = date(y_parse[0], m_parse[0], d_parse[0])
+        try:
+            orig = date(y_parse[0], m_parse[0], d_parse[0])
+        except ValueError as e:
+            logging.error('Failed to parse "%s" as a valid date: %s',
+                          anno.text, e)
+            return anno.text
 
         # Limit operation to the date to include, if specified.
         if self.include_key is not None and self._include_val != orig:
             return anno.text
 
         # Shift.
-        try:
-            shifted = orig + timedelta(days=self._shift)
-        except ValueError as e:
-            logging.error('Failed to parse "%s" as a valid date: %s',
-                          anno.text, e)
-            return anno.text
+        shifted = orig + timedelta(days=self._shift)
 
         # Format.
         joiners = _DATE_SPLITTER_RX.findall(anno.text)

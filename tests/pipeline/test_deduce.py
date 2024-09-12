@@ -184,6 +184,22 @@ class TestDeduce:
         assert 'woonachtig in [LOCATIE-2], [LOCATIE-4]' in doc2.deidentified_text
         assert 'ook in [LOCATIE-2]' in doc2.deidentified_text
 
+        # When we provide custom annotations to redact,
+        metadata_with_annos = dict(
+            metadata,
+            annotations=dd.AnnotationSet([
+                dd.Annotation(text='betreft', start_char=0, end_char=7, tag='kw'),
+                dd.Annotation(text='bsn', start_char=21, end_char=24, tag='kw')
+            ]),
+            tagged_mentions={'kw': ['patient', 'betreft']}
+        )
+
+        # Then, it should be used by the redactor.
+        doc3 = model.deidentify(text,
+                                metadata=metadata_with_annos,
+                                enabled={'post_processing', 'redactor'})
+        assert doc3.deidentified_text.startswith('[KW-2]: Jan Jansen, [KW-3] 111')
+
     def test_annotate_intext(self, model):
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
         doc = model.deidentify(text, metadata=metadata)

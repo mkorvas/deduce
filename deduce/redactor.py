@@ -236,6 +236,11 @@ class DeduceRedactor(SimpleRedactor):
             except RuntimeError:
                 pass
 
+            # This could also be our source of annotations -- when only redacting.
+            # This is ugly... sorry.
+            if not annotations and (meta_annos := metadata['annotations']) is not None:
+                annotations = meta_annos
+
         repls: dict[str, dict[str, str]] = {}
         for tag, same_tag_annos in SimpleRedactor._group_by_tag(annotations):
             if tag == "patient":

@@ -3,6 +3,7 @@ from datetime import date
 import pytest
 
 import docdeid as dd
+from docdeid.utils import annotate_intext
 from deduce import Deduce
 from deduce.person import Person
 
@@ -219,6 +220,9 @@ class TestDeduce:
                                 metadata=metadata_with_annos_2,
                                 enabled={'post_processing', 'redactor'})
         assert tagged_mentions['kw'] == ['betreft', 'bsn']
+
+        # And, annotating the text without supplying annotations again should work.
+        assert annotate_intext(doc4).startswith('<KW>betreft</KW>: Jan')
 
     def test_annotate_intext(self, model):
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}

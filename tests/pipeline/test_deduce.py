@@ -159,6 +159,31 @@ class TestDeduce:
 
         assert doc.deidentified_text == expected_deidentified
 
+    def test_mention_idxs(self, model):
+        # Given the same inputs as in `test_deidentify`.
+        metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
+        doc = model.deidentify(text, metadata=metadata)
+
+        # The document metadata should now contain information about indices assigned
+        # to every mention.
+        assert doc.metadata['tagged_mentions']['locatie'] == ['Utrecht', 'IJSWEG 10r']
+
+        # When we set the metadata to reflect annotations identified in (hypothetical)
+        # preceding related text,
+        modified_metadata = dict(
+            metadata,
+            tagged_mentions={'locatie': ['Frankrijk', 'Xtrecht', 'Wielingen']})
+
+        # Then, mention indices should be shifted accordingly.
+        doc2 = model.deidentify(text, metadata=modified_metadata)
+        assert doc2.metadata['tagged_mentions']['locatie'] == [
+            'Frankrijk', 'Xtrecht', 'Wielingen', 'IJSWEG 10r'
+        ]
+
+        # And, they should also be used in the deidentified text.
+        assert 'woonachtig in [LOCATIE-2], [LOCATIE-4]' in doc2.deidentified_text
+        assert 'ook in [LOCATIE-2]' in doc2.deidentified_text
+
     def test_annotate_intext(self, model):
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
         doc = model.deidentify(text, metadata=metadata)

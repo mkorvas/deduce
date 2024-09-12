@@ -200,6 +200,16 @@ class DeduceRedactor(SimpleRedactor):
       which is constant within a document but randomized across documents.
     - All other annotations are replaced with <TAG-n>, with n identifying a group
         of annotations with a similar text (edit_distance <= 1).
+
+    When document metadata are available, the "tagged_mentions" item is used:
+
+    - As input -- when present, it will be consulted for indices previously used in the
+      placeholders for mentions of a given entity category ("persoon", "locatie"...).
+    - As output -- it will contain mention representatives in the same format.
+
+    The format of "tagged_mentions" is the following: ::
+
+      {tag: [representative_text_0, representative_text_1, ...]}
     """
 
     def __init__(self,
@@ -214,6 +224,18 @@ class DeduceRedactor(SimpleRedactor):
                metadata: Optional[dd.MetaData] = None) -> str:
         repls = {}
         self.date_strategy.on_document(metadata)
+        if metadata is None:
+            tagged_mentions = {}
+        else:
+            # If we have MetaData, update the known mentions there.
+            # FIXME This MetaData API is so inconvenient! It doesn't allow for
+            #  testing whether a key is present, it already throws an exception. Good
+            #  old `dict.setdefault()`...
+            tagged_mentions = metadata['tagged_mentions'] or {}
+            try:
+                metadata['tagged_mentions'] = tagged_mentions
+            except RuntimeError:
+                pass
 
         for tag, same_tag_annos in SimpleRedactor._group_by_tag(annotations):
             sorted_annos = sorted(same_tag_annos, key=attrgetter('end_char'))
@@ -229,27 +251,21 @@ class DeduceRedactor(SimpleRedactor):
 
             match_tolerance = 0 if tag == "datum" else 1
 
+            known_mentions = tagged_mentions.setdefault(tag, [])
             same_tag_repls: dict[dd.Annotation, str] = {}
             for anno in sorted_annos:
                 # Look for existing similar mentions with this tag.
-                for same_tag_anno, repl in same_tag_repls.items():
-                    if (
-                        DamerauLevenshtein.distance(
-                            anno.text, same_tag_anno.text, score_cutoff=1
-                        )
-                        <= match_tolerance
-                    ):
-                        same_tag_repls[anno] = repl
+                for mi, ment in enumerate(known_mentions):
+                    if (DamerauLevenshtein.distance(anno.text, ment, score_cutoff=1)
+                            <= match_tolerance):
                         break
                 else:
-                    # If no existing mention, build a new replacement string.
-                    same_tag_repls[anno] = (
-                        f"{self.open_char}"
-                        f"{tag.upper()}"
-                        f"-"
-                        f"{len(same_tag_repls) + 1}"
-                        f"{self.close_char}"
-                    )
+                    # If none such exists, allocate a new index for this one.
+                    mi = len(known_mentions)
+                    known_mentions.append(anno.text)
+
+                repl = f"{self.open_char}{tag.upper()}-{mi + 1}{self.close_char}"
+                same_tag_repls[anno] = repl
 
             repls.update(same_tag_repls)
 

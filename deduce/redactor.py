@@ -123,30 +123,30 @@ class DateStrategy:
             self._shift = rand_shift + 1 if rand_shift >= 0 else rand_shift
             logging.debug("Updated date shift amount to %d.", self._shift)
 
-    def redact(self, anno: dd.Annotation) -> str:
+    def redact(self, mention: str) -> str:
         if self.strategy != "shift":
             raise ValueError("DateStrategy.redact is only implemented for the 'shift' "
                              "strategy.")
 
         # Parse.
-        date_parts = _DATE_SPLITTER_RX.split(anno.text)
+        date_parts = _DATE_SPLITTER_RX.split(mention)
         if len(date_parts) <= 1:
             # Too vague (just the year), keep the original.
-            return anno.text
+            return mention
         if len(date_parts) > 3:
             # Unusual date format or not a date, don't know how to handle.
             logging.error('Failed to parse "%s" as a valid date: too many parts',
-                          anno.text)
-            return anno.text
+                          mention)
+            return mention
         if len(date_parts) <= 2:
             logging.error('Failed to parse "%s" as a valid date: just 2 parts',
-                          anno.text)
-            return anno.text
+                          mention)
+            return mention
         m_parse = try_parse_month(date_parts[1])
         if m_parse is None:
             logging.error('Failed to parse "%s" as a valid date: cannot parse month',
-                          anno.text)
-            return anno.text
+                          mention)
+            return mention
         d_parse = try_parse_day(date_parts[0])
         y_parse = try_parse_year(date_parts[2])
         if d_parse is not None and y_parse is not None:
@@ -160,31 +160,31 @@ class DateStrategy:
                 if d_parse is None:
                     logging.error(
                         'Failed to parse "%s" as a valid date: cannot parse day',
-                        anno.text)
+                        mention)
                 if y_parse is None:
                     logging.error(
                         'Failed to parse "%s" as a valid date: cannot parse year',
-                        anno.text)
-                return anno.text
+                        mention)
+                return mention
 
         try:
             orig = date(y_parse[0], m_parse[0], d_parse[0])
         except ValueError as e:
             logging.error('Failed to parse "%s" as a valid date: %s',
-                          anno.text, e)
-            return anno.text
+                          mention, e)
+            return mention
 
         # Limit operation to the date to include, if specified.
         if self.include_key is not None and self._include_val != orig:
-            return anno.text
+            return mention
 
         # Shift.
         shifted = orig + timedelta(days=self._shift)
 
         # Format.
-        joiners = _DATE_SPLITTER_RX.findall(anno.text)
-        shifted_parts = [format_day(shifted.day, d_parse, anno.text),
-                         format_month(shifted.month, m_parse, anno.text),
+        joiners = _DATE_SPLITTER_RX.findall(mention)
+        shifted_parts = [format_day(shifted.day, d_parse, mention),
+                         format_month(shifted.month, m_parse, mention),
                          format_year(shifted.year, y_parse)]
         ordered_parts = (shifted_parts if year_idx == 2 else
                          list(reversed(shifted_parts)))
@@ -222,7 +222,6 @@ class DeduceRedactor(SimpleRedactor):
                text: str,
                annotations: dd.AnnotationSet,
                metadata: Optional[dd.MetaData] = None) -> str:
-        repls = {}
         self.date_strategy.on_document(metadata)
         if metadata is None:
             tagged_mentions = {}
@@ -237,22 +236,25 @@ class DeduceRedactor(SimpleRedactor):
             except RuntimeError:
                 pass
 
+        repls: dict[str, dict[str, str]] = {}
         for tag, same_tag_annos in SimpleRedactor._group_by_tag(annotations):
-            sorted_annos = sorted(same_tag_annos, key=attrgetter('end_char'))
             if tag == "patient":
-                repls.update((anno, f"{self.open_char}PATIENT{self.close_char}")
-                             for anno in sorted_annos)
+                mentions = {anno.text for anno in same_tag_annos}
+                repl = f"{self.open_char}PATIENT{self.close_char}"
+                repls[tag] = dict.fromkeys(mentions, repl)
                 continue
 
             if tag == "datum" and self.date_strategy.strategy == "shift":
-                repls.update((anno, self.date_strategy.redact(anno))
-                             for anno in sorted_annos)
+                mentions = {anno.text for anno in same_tag_annos}
+                repls[tag] = {mention: self.date_strategy.redact(mention)
+                              for mention in mentions}
                 continue
 
             match_tolerance = 0 if tag == "datum" else 1
 
             known_mentions = tagged_mentions.setdefault(tag, [])
-            same_tag_repls: dict[dd.Annotation, str] = {}
+            tag_repls = repls[tag] = {}
+            sorted_annos = sorted(same_tag_annos, key=attrgetter('end_char'))
             for anno in sorted_annos:
                 # Look for existing similar mentions with this tag.
                 for mi, ment in enumerate(known_mentions):
@@ -265,8 +267,6 @@ class DeduceRedactor(SimpleRedactor):
                     known_mentions.append(anno.text)
 
                 repl = f"{self.open_char}{tag.upper()}-{mi + 1}{self.close_char}"
-                same_tag_repls[anno] = repl
-
-            repls.update(same_tag_repls)
+                tag_repls[anno.text] = repl
 
         return self._replace_annotations_in_text(text, annotations, repls)

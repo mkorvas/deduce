@@ -227,14 +227,9 @@ class DeduceRedactor(SimpleRedactor):
             tagged_mentions = {}
         else:
             # If we have MetaData, update the known mentions there.
-            # FIXME This MetaData API is so inconvenient! It doesn't allow for
-            #  testing whether a key is present, it already throws an exception. Good
-            #  old `dict.setdefault()`...
-            tagged_mentions = metadata['tagged_mentions'] or {}
-            try:
-                metadata['tagged_mentions'] = tagged_mentions
-            except RuntimeError:
-                pass
+            tagged_mentions = metadata['tagged_mentions']
+            if tagged_mentions is None:
+                tagged_mentions = metadata['tagged_mentions'] = {}
 
             # This could also be our source of annotations -- when only redacting.
             # This is ugly... sorry.

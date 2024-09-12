@@ -185,13 +185,15 @@ class TestDeduce:
         assert 'ook in [LOCATIE-2]' in doc2.deidentified_text
 
         # When we provide custom annotations to redact,
+        tagged_mentions = {'kw': ['patient', 'betreft']}
+
         metadata_with_annos = dict(
             metadata,
             annotations=dd.AnnotationSet([
                 dd.Annotation(text='betreft', start_char=0, end_char=7, tag='kw'),
                 dd.Annotation(text='bsn', start_char=21, end_char=24, tag='kw')
             ]),
-            tagged_mentions={'kw': ['patient', 'betreft']}
+            tagged_mentions=tagged_mentions
         )
 
         # Then, it should be used by the redactor.
@@ -199,6 +201,24 @@ class TestDeduce:
                                 metadata=metadata_with_annos,
                                 enabled={'post_processing', 'redactor'})
         assert doc3.deidentified_text.startswith('[KW-2]: Jan Jansen, [KW-3] 111')
+
+        # When we provide empty custom annotations to redact,
+        tagged_mentions = {}
+
+        metadata_with_annos_2 = dict(
+            metadata,
+            annotations=dd.AnnotationSet([
+                dd.Annotation(text='betreft', start_char=0, end_char=7, tag='kw'),
+                dd.Annotation(text='bsn', start_char=21, end_char=24, tag='kw')
+            ]),
+            tagged_mentions=tagged_mentions
+        )
+
+        # Then, it should still be used by the redactor.
+        doc4 = model.deidentify(text,
+                                metadata=metadata_with_annos_2,
+                                enabled={'post_processing', 'redactor'})
+        assert tagged_mentions['kw'] == ['betreft', 'bsn']
 
     def test_annotate_intext(self, model):
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}

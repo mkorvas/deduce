@@ -229,22 +229,6 @@ class DynamicNameAnnotator(dd.process.Annotator):
         return drop_accents(lowercase_tail(phrase, keep_mixed=False))
 
     @classmethod
-    def _match_first_name(
-            cls,
-            token: Token,
-            name: str,
-            max_tolerance: int = 1,
-    ) -> Optional[tuple[Token, Token]]:
-
-        have_norm = cls._normalize(token.text)
-        want_norm = cls._normalize(name)
-        tolerance = max_tolerance if len(have_norm) > 3 else 0
-        if str_match(have_norm, want_norm, max_edit_distance=tolerance):
-            return token, token
-        else:
-            return None
-
-    @classmethod
     def _match_initial_from_name(
             cls,
             token: Token,
@@ -277,7 +261,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
         return None
 
     @classmethod
-    def _match_surname(
+    def _match_tokenized(
             cls,
             token: Token,
             surname_pattern: TokenList,
@@ -290,8 +274,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
         while True:
             have_norm = cls._normalize(surname_token.text)
             want_norm = cls._normalize(token.text)
-            if not str_match(have_norm, want_norm,
-                             max_edit_distance=max_tolerance):
+            if not str_match(have_norm, want_norm, max_tolerance):
                 return None
 
             match_end_token = token
@@ -371,12 +354,12 @@ class DynamicNameAnnotator(dd.process.Annotator):
         return matchers
 
     def _build_matchers_for_fn(self, meta_defs):
-        self_fn_matcher = partial(DynamicNameAnnotator._match_first_name,
+        self_fn_matcher = partial(DynamicNameAnnotator._match_tokenized,
                                   max_tolerance=self.tolerance)
         for meta_def in meta_defs:
             for name in (getattr(meta_def, 'first_names', None) or ()):
                 yield (self_fn_matcher,
-                       name,
+                       self.tokenizer.tokenize(name),
                        f'voornaam_{self.meta_key}')
                 yield (DynamicNameAnnotator._match_initial_from_name,
                        name,
@@ -390,7 +373,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
                        f'initiaal_{self.meta_key}')
 
     def _build_matchers_for_ln(self, meta_defs):
-        self_ln_matcher = partial(DynamicNameAnnotator._match_surname,
+        self_ln_matcher = partial(DynamicNameAnnotator._match_tokenized,
                                   max_tolerance=self.tolerance)
         for meta_def in meta_defs:
             if surname := getattr(meta_def, 'surname'):
@@ -400,7 +383,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
 
     def _build_matchers_for_ln_pat(self, metadata):
         if surname_pat := metadata['surname_pattern']:
-            yield (DynamicNameAnnotator._match_surname,
+            yield (DynamicNameAnnotator._match_tokenized,
                    surname_pat,
                    f'achternaam_{self.meta_key}')
 

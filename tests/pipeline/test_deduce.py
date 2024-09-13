@@ -83,6 +83,13 @@ def model_birth_date(shared_datadir):
             'redactor_date_strategy': 'shift',
             'redactor_date_strategy_init_shift': 1,
             'redactor_date_strategy_include_key': 'birth_date',
+            'annotators': {
+                'patient_name': {
+                    'args': {
+                        'tolerance': 0
+                    }
+                }
+            }
         }
     )
 
@@ -92,10 +99,10 @@ def model_birth_date(shared_datadir):
 
 
 class TestDeduce:
-    def test_annotate(self, model):
+    def test_annotate(self, strict_model):
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
 
-        doc = model.deidentify(text, metadata=metadata)
+        doc = strict_model.deidentify(text, metadata=metadata)
 
         expected_annotations = {
             dd.Annotation(
@@ -138,9 +145,9 @@ class TestDeduce:
 
         assert set(doc.annotations) == expected_annotations
 
-    def test_deidentify(self, model):
+    def test_deidentify(self, strict_model):
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
-        doc = model.deidentify(text, metadata=metadata)
+        doc = strict_model.deidentify(text, metadata=metadata)
 
         expected_deidentified = (
             "betreft: [PATIENT], bsn [BSN-1], patnr [ID-1]. De patient [PATIENT] is "
@@ -160,10 +167,10 @@ class TestDeduce:
 
         assert doc.deidentified_text == expected_deidentified
 
-    def test_mention_idxs(self, model):
+    def test_mention_idxs(self, strict_model):
         # Given the same inputs as in `test_deidentify`.
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
-        doc = model.deidentify(text, metadata=metadata)
+        doc = strict_model.deidentify(text, metadata=metadata)
 
         # The document metadata should now contain information about indices assigned
         # to every mention.
@@ -176,7 +183,7 @@ class TestDeduce:
             tagged_mentions={'locatie': ['Frankrijk', 'Xtrecht', 'Wielingen']})
 
         # Then, mention indices should be shifted accordingly.
-        doc2 = model.deidentify(text, metadata=modified_metadata)
+        doc2 = strict_model.deidentify(text, metadata=modified_metadata)
         assert doc2.metadata['tagged_mentions']['locatie'] == [
             'Frankrijk', 'Xtrecht', 'Wielingen', 'IJSWEG 10r'
         ]
@@ -198,9 +205,9 @@ class TestDeduce:
         )
 
         # Then, it should be used by the redactor.
-        doc3 = model.deidentify(text,
-                                metadata=metadata_with_annos,
-                                enabled={'post_processing', 'redactor'})
+        doc3 = strict_model.deidentify(text,
+                                       metadata=metadata_with_annos,
+                                       enabled={'post_processing', 'redactor'})
         assert doc3.deidentified_text.startswith('[KW-2]: Jan Jansen, [KW-3] 111')
 
         # When we provide empty custom annotations to redact,
@@ -216,17 +223,17 @@ class TestDeduce:
         )
 
         # Then, it should still be used by the redactor.
-        doc4 = model.deidentify(text,
-                                metadata=metadata_with_annos_2,
-                                enabled={'post_processing', 'redactor'})
+        doc4 = strict_model.deidentify(text,
+                                       metadata=metadata_with_annos_2,
+                                       enabled={'post_processing', 'redactor'})
         assert tagged_mentions['kw'] == ['betreft', 'bsn']
 
         # And, annotating the text without supplying annotations again should work.
         assert annotate_intext(doc4).startswith('<KW>betreft</KW>: Jan')
 
-    def test_annotate_intext(self, model):
+    def test_annotate_intext(self, strict_model):
         metadata = {"patient": Person(first_names=["Jan"], surname="Jansen")}
-        doc = model.deidentify(text, metadata=metadata)
+        doc = strict_model.deidentify(text, metadata=metadata)
 
         expected_intext_annotated = (
             "betreft: <PATIENT>Jan Jansen</PATIENT>, bsn <BSN>111222333</BSN>, "
@@ -392,7 +399,7 @@ class TestDeduce:
         deid = model_birth_date.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
 
-    def test_unrecognized_patient(self, model):
+    def test_unrecognized_patient(self, strict_model):
         # Due to an indexing error, mentions following a single-character token (\n
         # in this case) used to be handled wrongly.
         metadata = {"patient": Person(first_names=["Jan", "Jacob"],
@@ -401,19 +408,24 @@ class TestDeduce:
                "werken.")
         want = ("Deze patiënt(e)\n\n[PATIENT]\n\nNiet in staat is van te werken.")
 
-        deid = model.deidentify(doc, metadata=metadata)
+        deid = strict_model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
 
     def test_unrecognized_patient_2(self, model):
         metadata = {"patient": Person(first_names=["ANAÏS-MARÍA", "MAREIKE"],
                                       surname="LAATST")}
 
-        doc = "Uw patiente ANAÏS-MARÍA LAATST is volledig gezond."
-        want = "Uw patiente [PATIENT] is volledig gezond."
+        doc = "Uw patiente ANAÏS-MARÍA LAATST is volledig gezond (1)."
+        want = "Uw patiente [PATIENT] is volledig gezond (1)."
         deid = model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
 
-        doc = "Uw patiente ANAÏS-MARÍA LAATST is volledig gezond."
-        want = "Uw patiente [PATIENT] is volledig gezond."
+        doc = "Uw patiente Anaïs-maría Laatst is volledig gezond (2)."
+        want = "Uw patiente [PATIENT] is volledig gezond (2)."
+        deid = model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want
+
+        doc = "Uw patiente Laatst Anais-maria is volledig gezond (3)."
+        want = "Uw patiente [PATIENT] is volledig gezond (3)."
         deid = model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want

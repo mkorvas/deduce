@@ -24,7 +24,9 @@ def str_match(
         str_1: The first string.
         str_2: The second string.
         max_edit_distance: Max edit distance between the two strings. Will use
-                           exact matching if argument is not used or equals 0.
+                           exact matching if argument is not used or equals 0 or any
+                           of the two strings less than 4 characters long.
+        titlecase: Should both strings undergo titlecasing before being compared?
 
     Returns:
         ``True`` if the strings match, ``False`` otherwise.
@@ -35,7 +37,7 @@ def str_match(
         else (str_1, str_2)
     )
 
-    if max_edit_distance:
+    if max_edit_distance and len(str_1) >= 4 and len(str_2) >= 4:
         return (
             DamerauLevenshtein.distance(norm_1, norm_2, score_cutoff=max_edit_distance)
             <= max_edit_distance

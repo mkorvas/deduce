@@ -656,16 +656,12 @@ class TestPatientNameAnnotator:
             )
         }
         text = "De patient heet Jan"
-        tokens = tokenizer.tokenize(text)
-        doc = dd.Document(text=text, metadata=metadata)
-
+        doc = dd.Document(text=text,
+                          tokenizers={'default': tokenizer},
+                          metadata=metadata)
         ann = PatientNameAnnotator(tokenizer=tokenizer, tag="_")
 
-        with patch.object(doc, "get_tokens", return_value=tokens):
-            with patch.object(
-                tokenizer, "tokenize", return_value=linked_tokens(["Jansen"])
-            ):
-                annotations = ann.annotate(doc)
+        annotations = ann.annotate(doc)
 
         assert annotations == [
             dd.Annotation(
@@ -743,16 +739,13 @@ class TestPatientNameAnnotator:
             )
         }
         text = "De patient heet Jansen"
-        tokens = tokenizer.tokenize(text)
-        doc = dd.Document(text=text, metadata=metadata)
+        doc = dd.Document(text=text,
+                          tokenizers={'default': tokenizer},
+                          metadata=metadata)
 
         ann = PatientNameAnnotator(tokenizer=tokenizer, tag="_")
 
-        with patch.object(doc, "get_tokens", return_value=tokens):
-            with patch.object(
-                    tokenizer, "tokenize", return_value=linked_tokens(["Jansen"])
-            ):
-                annotations = ann.annotate(doc)
+        annotations = ann.annotate(doc)
 
         assert annotations == [
             dd.Annotation(

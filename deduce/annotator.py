@@ -8,7 +8,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import partial
 from itertools import islice
-from typing import Optional
+from typing import Optional, Tuple
 
 import docdeid as dd
 from deduce.person import Person
@@ -225,8 +225,10 @@ class DynamicNameAnnotator(dd.process.Annotator):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def _normalize(cls, phrase: str):
-        return drop_accents(lowercase_tail(phrase, keep_mixed=False))
+    def _normalize(cls, phrase: str, lower_first: bool = False):
+        cased = (phrase.lower() if lower_first else
+                 lowercase_tail(phrase, keep_mixed=False))
+        return drop_accents(cased)
 
     @classmethod
     def _match_initial_from_name(
@@ -263,29 +265,35 @@ class DynamicNameAnnotator(dd.process.Annotator):
     @classmethod
     def _match_tokenized(
             cls,
-            token: Token,
-            surname_pattern: TokenList,
+            hay_token: Token,
+            needle_tokens: Tuple[Optional[str], TokenList],
             max_tolerance: int = 1,
     ) -> Optional[tuple[Token, Token]]:
 
-        surname_token = surname_pattern[0]
-        start_token = token
+        needle_text = needle_tokens[0]
 
+        needle_token = needle_tokens[1][0]
+        start_hay = hay_token
         while True:
-            have_norm = cls._normalize(surname_token.text)
-            want_norm = cls._normalize(token.text)
+            # When searching for phrases like "Jean-Paul", allow the "Paul" to be
+            # written with lowercase "p" -- in general, whenever it's preceded by a
+            # non-space.
+            accept_lower = (needle_text and needle_token.start_char and
+                            not needle_text[needle_token.start_char].isspace())
+            have_norm = cls._normalize(hay_token.text, accept_lower)
+            want_norm = cls._normalize(needle_token.text, accept_lower)
             if not str_match(have_norm, want_norm, max_tolerance):
                 return None
 
-            match_end_token = token
+            match_end_token = hay_token
 
-            surname_token = cls._next_with_skip(surname_token)
-            token = cls._next_with_skip(token)
+            needle_token = cls._next_with_skip(needle_token)
+            hay_token = cls._next_with_skip(hay_token)
 
-            if surname_token is None:
-                return start_token, match_end_token  # end of pattern
+            if needle_token is None:
+                return start_hay, match_end_token  # end of pattern
 
-            if token is None:
+            if hay_token is None:
                 return None  # end of tokens
 
     @classmethod
@@ -319,8 +327,8 @@ class DynamicNameAnnotator(dd.process.Annotator):
         return annotations
 
     def _annotate_token(self, doc, token, matchers):
-        for matcher, name, tag in matchers:
-            match = matcher(token, name)
+        for matcher, args, tag in matchers:
+            match = matcher(token, args)
             if match is None:
                 continue
             start_token, end_token = match
@@ -359,7 +367,7 @@ class DynamicNameAnnotator(dd.process.Annotator):
         for meta_def in meta_defs:
             for name in (getattr(meta_def, 'first_names', None) or ()):
                 yield (self_fn_matcher,
-                       self.tokenizer.tokenize(name),
+                       (name, self.tokenizer.tokenize(name)),
                        f'voornaam_{self.meta_key}')
                 yield (DynamicNameAnnotator._match_initial_from_name,
                        name,
@@ -378,13 +386,13 @@ class DynamicNameAnnotator(dd.process.Annotator):
         for meta_def in meta_defs:
             if surname := getattr(meta_def, 'surname'):
                 yield (self_ln_matcher,
-                       self.tokenizer.tokenize(surname),
+                       (surname, self.tokenizer.tokenize(surname)),
                        f'achternaam_{self.meta_key}')
 
     def _build_matchers_for_ln_pat(self, metadata):
         if surname_pat := metadata['surname_pattern']:
             yield (DynamicNameAnnotator._match_tokenized,
-                   surname_pat,
+                   (None, surname_pat),
                    f'achternaam_{self.meta_key}')
 
 

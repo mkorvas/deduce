@@ -429,3 +429,8 @@ class TestDeduce:
         want = "Uw patiente [PATIENT] is volledig gezond (3)."
         deid = model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
+
+        doc = "Uw patiente Laatst Anais-maria Mareike is volledig gezond (4)."
+        want = "Uw patiente [PATIENT] is volledig gezond (4)."
+        deid = model.deidentify(doc, metadata=metadata)
+        assert deid.deidentified_text == want

@@ -10,7 +10,7 @@ class DeduceMergeAdjacentAnnotations(dd.process.MergeAdjacentAnnotations):
     """
     Merges adjacent tags, according to Deduce logic:
 
-    - adjacent date annotations are not merged;
+    - adjacent date or ID annotations are not merged;
     - adjacent annotations with mixed patient/person tags are replaced
       with the "persoon" annotation;
     - adjacent annotations with patient tags are replaced with the "patient" annotation.
@@ -30,7 +30,7 @@ class DeduceMergeAdjacentAnnotations(dd.process.MergeAdjacentAnnotations):
         """
 
         patient_part = [tag.endswith("_patient") for tag in (left_tag, right_tag)]
-        return left_tag != "datum" and (
+        return left_tag not in ("datum", "id") and (
             left_tag == right_tag
             or all(patient_part)
             # XXX Why only this way, why not enable also "persoon" as the left tag

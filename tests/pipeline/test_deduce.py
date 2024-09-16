@@ -94,6 +94,32 @@ def model_birth_date(shared_datadir):
     )
 
 
+@pytest.fixture
+def model_with_streets(shared_datadir):
+    return Deduce(
+        save_lookup_structs=False,
+        build_lookup_structs=True,
+        lookup_data_path=shared_datadir / "lookup",
+        config={
+            "annotators": {
+                "dynamic_street": {
+                    "annotator_type": "docdeid.process.DynamicPhraseLookup",
+                    "group": "locations",
+                    "args": {
+                        "meta_key": "street",
+                        "tag": "locatie",
+                        "matching_pipeline": [
+                            {
+                                "type": "docdeid.str.LowercaseTail"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    )
+
+
 # import pydevd_pycharm
 # pydevd_pycharm.settrace()
 
@@ -440,4 +466,12 @@ class TestDeduce:
         want = "patiënt woont in [LOCATIE-1]."
 
         deid = model.deidentify(doc)
+        assert deid.deidentified_text == want
+
+    def test_matching_config(self, model_with_streets):
+        metadata = {"street": ["Pijnstraat 66"]}
+        doc = "patiënt woont in PIJNSTRAAT 66."
+        want = "patiënt woont in [LOCATIE-1]."
+
+        deid = model_with_streets.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want

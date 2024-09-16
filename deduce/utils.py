@@ -3,7 +3,7 @@ import inspect
 import json
 import re
 from pathlib import Path
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 from docdeid.str import LowercaseTail
 from rapidfuzz.distance import DamerauLevenshtein
@@ -57,6 +57,7 @@ def class_for_name(fq_name: str) -> type:
         The class.
     """
 
+    module_name, _, class_name = fq_name.rpartition(".")
     module = importlib.import_module(module_name)
     return getattr(module, class_name)
 
@@ -76,15 +77,20 @@ def initialize_class(cls: type, args: dict, extras: dict) -> object:
         An instantiated class, with the relevant arguments and extras.
     """
 
+    all_args = dict(args)
     cls_params = inspect.signature(cls).parameters
+    all_args.update(filter(lambda it: it[0] in cls_params, extras.items()))
+    if 'matching_pipeline' in all_args:
+        all_args['matching_pipeline'] = list(map(_class_from_dict,
+                                                 all_args['matching_pipeline']))
+    return cls(**all_args)
 
-    for arg_name, arg in extras.items():
 
-        if arg_name in cls_params:
-
-            args[arg_name] = arg
-
-    return cls(**args)
+def _class_from_dict(args: Dict[str, str]) -> type:
+    cls = class_for_name(args['type'])
+    init_args = args.get('args', ())
+    init_kwargs = args.get('kwargs', {})
+    return cls(*init_args, **init_kwargs)
 
 
 def overwrite_dict(base: dict, add: dict) -> dict:

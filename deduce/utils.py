@@ -46,13 +46,12 @@ def str_match(
         return norm_1 == norm_2
 
 
-def class_for_name(module_name: str, class_name: str) -> type:
+def class_for_name(fq_name: str) -> type:
     """
     Will import and return the class by name.
 
     Args:
-        module_name: The module where the class can be found.
-        class_name: The class name.
+        fq_name: Fully-qualified name of the class.
 
     Returns:
         The class.

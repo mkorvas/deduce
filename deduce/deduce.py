@@ -206,13 +206,7 @@ class _DeduceProcessorLoader:  # pylint: disable=R0903
     def _get_annotator_from_class(
         annotator_type: str, args: dict, extras: dict
     ) -> dd.process.Annotator:
-
-        elems = annotator_type.split(".")
-        module_name = ".".join(elems[:-1])
-        class_name = elems[-1]
-
-        cls = utils.class_for_name(module_name=module_name, class_name=class_name)
-
+        cls = utils.class_for_name(annotator_type)
         return utils.initialize_class(cls, args, extras)
 
     @staticmethod

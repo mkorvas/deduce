@@ -28,12 +28,7 @@ class TestStrMatch:
 
 class TestClassForName:
     def test_class_for_name(self):
-        assert (
-                utils.class_for_name(
-                module_name="deduce.annotator", class_name="BsnAnnotator"
-            )
-                == BsnAnnotator
-        )
+        assert utils.class_for_name("deduce.annotator.BsnAnnotator") == BsnAnnotator
 
 
 class TestInitializeClass:

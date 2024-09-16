@@ -434,3 +434,10 @@ class TestDeduce:
         want = "Uw patiente [PATIENT] is volledig gezond (4)."
         deid = model.deidentify(doc, metadata=metadata)
         assert deid.deidentified_text == want
+
+    def test_town_transform(self, model):
+        doc = "patiënt woont in SINT JOB IN `T GOOR."
+        want = "patiënt woont in [LOCATIE-1]."
+
+        deid = model.deidentify(doc)
+        assert deid.deidentified_text == want
